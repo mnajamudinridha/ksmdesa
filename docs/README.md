@@ -68,7 +68,7 @@ Pengguna tidak pernah dihapus (dinonaktifkan). FK ke `users` dari tabel yang iku
 
 | Aturan | Tempat | Inti |
 |---|---|---|
-| Hari desa | `App\Support\Hari` | `Hari::ini()` / `Hari::tanggal($mundur)`. Bandingkan kolom `date` sebagai **string `Y-m-d`**, jangan sebagai instant (beda 8 jam). |
+| Hari desa | `App\Support\Hari` | `Hari::ini()` / `Hari::tanggal($mundur)`; `Hari::sebut()` = "hari ini" / "kemarin" / "Senin, 16 November". Bandingkan kolom `date` sebagai **string `Y-m-d`**, jangan sebagai instant (beda 8 jam). |
 | Nomor HP | `App\Support\NomorHp` | Normalisasi `+62/62/8…` → `08…`; valid `^08\d{8,11}$`. Unik dicek pada nilai **ternormalisasi**. |
 | Akun warga | `App\Support\AkunWarga` | Satu-satunya pembuat/penaut akun warga. Nomor yang sudah dipakai di KSM = tautkan ke pemiliknya. |
 | Sandi default desa | `Ksm::cocokSandiDefault`, hook `User::saving`, `Ksm::updated` | Hanya untuk warga. Admin/petugas tidak boleh memakainya. Naik peran dari warga **selalu** butuh sandi baru (hash tidak bisa dibandingkan dengan hash); di luar form → sandi acak (fail closed). |
@@ -116,6 +116,12 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
   pembangun di `App\Support\Laporan\` + widget turunan `TabelLaporanWidget` (data kustom `records()`, tidak lazy).
   Excel = `EksporXlsx::unduh()` (OpenSpout, `StreamedResponse` dari aksi Livewire); cetak = `window.print()` + aturan
   `@media print` di `resources/views/filament/laporan/kop.blade.php`.
+- **Grid dasbor** (master & desa, semua peran): grid 2 kolom, **tidak boleh ada baris setengah kosong**. Widget setengah
+  lebar selalu berpasangan untuk setiap peran yang melihatnya ("Selamat datang" + widget pendamping `SorotanMaster` /
+  `SorotanKsm`; "Komposisi pemasukan" + "Komposisi pengeluaran"; dua tabel riwayat warga); sisanya `'full'`. Grup kartu
+  stat mengisi baris penuh: 3, 4, atau 6 kartu (bawaan Filament: 3 kolom, atau 4 bila jumlah ≡ 1 mod 3); jumlah yang
+  berubah-ubah mengatur `getColumns()` sendiri (`WargaStatsOverview`). Dijaga `tests/Feature/GridDasborTest.php` —
+  widget dasbor baru otomatis ikut diperiksa.
 - Query resource per peran di `getEloquentQuery()` (admin semua / petugas miliknya / lainnya `whereRaw('1 = 0')`) **plus** policy.
 - Select/CheckboxList: opsi = himpunan yang sah → rule `in` bawaan Filament menolak nilai lain di server.
   Sertakan nilai tersimpan di opsi (mis. `PilihanPengguna::petugas($tersimpan)`) agar simpan tanpa perubahan tidak gagal.
@@ -167,6 +173,7 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
 | Uji teks bantuan field (`helperText`) | Filament 5 menjadikannya skema anak — tidak ada `getHelperText()` | taruh keputusannya di method statis dan uji method itu (mis. `TransaksiKasResource::peringatanPengepul`) |
 | Isi modal aksi tidak ada di `->html()` tes | konten modal tidak dirender di HTML Livewire test | uji state (`mountedActions.0.data`) / `assertFormFieldExists(..., 'mountedActionSchema0', …)` |
 | Widget Stat/Chart memuat ulang tiap 5 detik | bawaan `CanPoll` `'5s'` | widget laporan/keuangan: `protected ?string $pollingInterval = null` |
+| Dua widget sebaris tidak sama tinggi | grid meregangkan pembungkus widget, bukan `fi-section` di dalamnya | `sorotan-hari-ini.blade.php` meregangkan section kartu akun (tanpa tema kustom hanya kelas CSS Filament yang ada — pakai kelas `fi-account-widget-*`, bukan utilitas Tailwind baru) |
 | Bukti PDF tidak terbuka di Chrome | Laravel menyajikan berkas disk `local` dengan CSP `sandbox`; penampil PDF tidak berjalan di dokumen ber-sandbox | unduh lewat aksi (`Storage::download`, ditangkap Livewire) dan `FileUpload::downloadable()`, bukan `openable()` |
 | Berkas bukti tertinggal saat KSM dihapus | cascade DB menghapus baris tanpa event model | bukti per KSM (`bukti-kas/{id}`), `Ksm::deleted` menghapus foldernya (avatar masih punya celah yang sama) |
 | Nama `=HYPERLINK(…)` jadi rumus aktif di Excel | OpenSpout `Cell::fromValue()` membuat sel rumus untuk teks berawalan `=`; petugas bisa mengganti namanya sendiri | semua teks ditulis sebagai `StringCell` (`EksporXlsx::sel`); tes memeriksa XML lembar tanpa `<f>` (pembaca OpenSpout mengembalikan teks rumus apa adanya) |
@@ -194,6 +201,7 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
 | 5A | Master RT/RW, dasbor eksplisit + Kelengkapan data, Analitik & Laporan Operasional (Excel, cetak), Excel Rekap Iuran, widget panel master | [plans/2026-11-17-fase-5-dasbor-dan-laporan.md](plans/2026-11-17-fase-5-dasbor-dan-laporan.md) §5 |
 | 5B | Buku Kas (bukti privat), Kategori Transaksi, Mitra, saldo awal & mulai pembukuan, Analitik & Laporan Keuangan, kartu keuangan di dasbor | dokumen yang sama §6 |
 | 5C | Jenis & Catatan Material (penjualan → kas), Analitik Lingkungan & Kemitraan, Laporan Lingkungan / Kemitraan / Kinerja terintegrasi, kartu progres ekonomi sirkular, lingkungan & kemitraan di dasbor | dokumen yang sama §7 |
+| — | Grid dasbor tanpa slot kosong: widget pendamping "Selamat datang" (master: KSM belum mencatat 7 hari; admin: petugas belum mencatat hari ini; petugas: ronde terakhir; warga: terakhir diangkut), kartu master ke-6 "Material terpulihkan 30 hari", donat "Komposisi pengeluaran", kartu warga selebar baris | permintaan pemilik 2026-11-17 (tanpa dokumen rencana) |
 
 **Menunggu keputusan pemilik:** kebijakan `StatusIuran::tentukan()` (kurang/lebih/nonaktif), setelan email (`MAIL_MAILER=log`).
 **Fase 5 selesai** (5A–5C): [plans/2026-11-17-fase-5-dasbor-dan-laporan.md](plans/2026-11-17-fase-5-dasbor-dan-laporan.md).
