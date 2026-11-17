@@ -4,12 +4,14 @@ namespace App\Models;
 
 use App\Enums\PeranPengguna;
 use App\Models\Concerns\PunyaTampilanLogin;
+use Carbon\CarbonInterface;
 use Database\Factories\KsmFactory;
 use Filament\Models\Contracts\HasAvatar;
 use Filament\Models\Contracts\HasName;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -109,5 +111,30 @@ class Ksm extends Model implements HasAvatar, HasName
     public function wilayah(): HasMany
     {
         return $this->hasMany(Wilayah::class);
+    }
+
+    /**
+     * Relations whose new rows show that a KSM is using the app ("aktif mencatat").
+     *
+     * @var list<string>
+     */
+    public const RELASI_CATATAN = ['pengangkutan', 'pembayaranIuran', 'setoran'];
+
+    /** A KSM counts as "aktif mencatat" when it recorded something within this many days. */
+    public const int HARI_AKTIF_MENCATAT = 7;
+
+    public static function batasAktifMencatat(): CarbonInterface
+    {
+        return now()->subDays(self::HARI_AKTIF_MENCATAT);
+    }
+
+    /** KSMs that recorded anything (rounds, fees, deposits) since $sejak — an instant, compared with created_at. */
+    public function scopeAktifMencatat(Builder $query, CarbonInterface $sejak): Builder
+    {
+        return $query->where(function (Builder $ada) use ($sejak): void {
+            foreach (self::RELASI_CATATAN as $relasi) {
+                $ada->orWhereHas($relasi, fn (Builder $catatan) => $catatan->where('created_at', '>=', $sejak));
+            }
+        });
     }
 }
