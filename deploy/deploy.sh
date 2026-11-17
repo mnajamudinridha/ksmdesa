@@ -112,6 +112,8 @@ check "https://$HOST/admin/login" 200
 check "https://$HOST/admin" 302
 check "https://deploy-healthcheck.$HOST/up" 200
 check "https://deploy-healthcheck.$HOST/admin/login" 404
+check "https://$HOST/login" 404                       # KSM panel login never on the master host
+check "https://deploy-healthcheck.$HOST/login" 404    # unregistered subdomain: no login page
 
 trap - ERR
 echo "$TARGET" > "$DEPLOY_DIR/last_good_sha"
