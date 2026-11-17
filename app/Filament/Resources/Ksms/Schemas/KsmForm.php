@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Ksms\Schemas;
 
+use App\Filament\Shared\LatarLoginField;
 use App\Filament\Shared\LogoKsmField;
 use App\Filament\Shared\SandiDefaultField;
 use App\Support\SubdomainSlug;
@@ -51,10 +52,12 @@ class KsmForm
                             ->suffix('.'.config('app.domain'))
                             ->helperText('Alamat panel KSM. Mengubahnya memutus tautan & login lama.'),
                     ]),
-                Section::make('Logo')
+                Section::make('Logo & halaman login')
+                    ->description('Logo tampil di halaman login dan di samping nama KSM di aplikasi; latar menghiasi halaman login.')
                     ->columnSpanFull()
                     ->schema([
                         LogoKsmField::make(),
+                        LatarLoginField::make(),
                     ]),
                 Section::make('Sandi default warga')
                     ->description('Akun warga dibuat otomatis dari data pelanggan dan login dengan sandi ini sampai warga menggantinya sendiri.')

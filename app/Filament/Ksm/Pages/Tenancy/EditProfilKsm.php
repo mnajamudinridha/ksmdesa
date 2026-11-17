@@ -2,6 +2,7 @@
 
 namespace App\Filament\Ksm\Pages\Tenancy;
 
+use App\Filament\Shared\LatarLoginField;
 use App\Filament\Shared\LogoKsmField;
 use App\Filament\Shared\SandiDefaultField;
 use Filament\Forms\Components\TextInput;
@@ -36,13 +37,17 @@ class EditProfilKsm extends EditTenantProfile
             ->columns(1)
             ->components([
                 Section::make('Identitas KSM')
-                    ->description('Nama dan logo tampil di halaman login dan di panel KSM.')
                     ->schema([
                         TextInput::make('nama')
                             ->label('Nama KSM')
                             ->required()
                             ->maxLength(255),
+                    ]),
+                Section::make('Logo & halaman login')
+                    ->description('Logo tampil di halaman login dan di samping nama KSM di aplikasi; latar menghiasi halaman login.')
+                    ->schema([
                         LogoKsmField::make(),
+                        LatarLoginField::make(),
                     ]),
                 Section::make('Sandi default warga')
                     ->description('Akun warga dibuat otomatis dari data pelanggan dan login dengan sandi ini sampai warga menggantinya sendiri.')

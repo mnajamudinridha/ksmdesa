@@ -20,7 +20,9 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Icons\Heroicon;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -55,8 +57,11 @@ class KsmPanelProvider extends PanelProvider
             // Village users belong to one KSM: never offer the others.
             ->tenantMenu(fn (): bool => (bool) auth()->user()?->is_super_admin)
             ->brandName(fn (): string => $ksm()?->nama ?? 'KSM Desa')
-            ->brandLogo(fn (): ?string => $ksm()?->logoUrl())
-            ->brandLogoHeight('2.75rem')
+            ->brandLogo(fn (): string|Htmlable|null => self::logo($ksm()))
+            // Guests are on the login/reset pages, where the heading already names the KSM:
+            // the logo alone, larger. Inside the app: logo with the name beside it.
+            ->brandLogoHeight(fn (): string => auth()->check() ? '2.75rem' : '6rem')
+            ->renderHook(PanelsRenderHook::HEAD_END, fn (): string => self::gayaLatarLogin($ksm()), scopes: Login::class)
             ->colors([
                 'primary' => Color::Green,
             ])
@@ -96,5 +101,26 @@ class KsmPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
+    }
+
+    private static function logo(?Ksm $ksm): string|Htmlable|null
+    {
+        if (blank($ksm?->logo)) {
+            return null;
+        }
+
+        return auth()->check() ? view('filament.ksm.brand', ['ksm' => $ksm]) : $ksm->logoUrl();
+    }
+
+    /** The KSM's login background (one at random), darkened a little so the card stands out. */
+    private static function gayaLatarLogin(?Ksm $ksm): string
+    {
+        $url = $ksm?->latarLoginUrl();
+
+        if ($url === null) {
+            return '';
+        }
+
+        return '<style>.fi-simple-layout{background:linear-gradient(rgba(15,23,42,.35),rgba(15,23,42,.35)),url("'.$url.'") center/cover no-repeat fixed;}</style>';
     }
 }

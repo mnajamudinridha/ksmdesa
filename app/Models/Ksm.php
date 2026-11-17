@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PeranPengguna;
 use Database\Factories\KsmFactory;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Models\Contracts\HasName;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -19,20 +20,25 @@ use Illuminate\Support\Facades\Storage;
  * This is the tenant of the `ksm` Filament panel.
  */
 #[Table('ksm')]
-#[Fillable(['nama', 'slug', 'desa', 'logo', 'sandi_default_hash'])]
+#[Fillable(['nama', 'slug', 'desa', 'logo', 'latar_login', 'sandi_default_hash'])]
 // The hash never reaches form state / the browser.
 #[Hidden(['sandi_default_hash'])]
-class Ksm extends Model implements HasName
+class Ksm extends Model implements HasAvatar, HasName
 {
     /** @use HasFactory<KsmFactory> */
     use HasFactory;
 
     protected static function booted(): void
     {
-        // FileUpload never deletes the file it replaces; the model owns the logo's lifecycle.
+        // FileUpload never deletes the files it replaces; the model owns the images' lifecycle.
         static::updated(function (Ksm $ksm): void {
             if ($ksm->wasChanged('logo') && filled($lama = $ksm->getOriginal('logo'))) {
                 Storage::disk('public')->delete($lama);
+            }
+
+            if ($ksm->wasChanged('latar_login')) {
+                $dibuang = array_diff($ksm->getOriginal('latar_login') ?? [], $ksm->latar_login ?? []);
+                Storage::disk('public')->delete(array_values($dibuang));
             }
         });
 
@@ -50,10 +56,21 @@ class Ksm extends Model implements HasName
         });
 
         static::deleted(function (Ksm $ksm): void {
-            if (filled($ksm->logo)) {
-                Storage::disk('public')->delete($ksm->logo);
-            }
+            Storage::disk('public')->delete(array_filter([$ksm->logo, ...($ksm->latar_login ?? [])]));
         });
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'latar_login' => 'array',
+        ];
+    }
+
+    /** The KSM switcher shows the logo instead of initials. */
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->logoUrl();
     }
 
     public function getFilamentName(): string
@@ -78,6 +95,20 @@ class Ksm extends Model implements HasName
     public function logoUrl(): ?string
     {
         return filled($this->logo) ? Storage::disk('public')->url($this->logo) : null;
+    }
+
+    /**
+     * One of the login page backgrounds, picked at random, or null. Only paths the upload
+     * field can produce are used: the value goes into a CSS url().
+     */
+    public function latarLoginUrl(): ?string
+    {
+        $latar = array_values(array_filter(
+            $this->latar_login ?? [],
+            fn (mixed $path): bool => is_string($path) && preg_match('#^latar-login/[A-Za-z0-9._-]+$#', $path) === 1,
+        ));
+
+        return $latar === [] ? null : Storage::disk('public')->url($latar[array_rand($latar)]);
     }
 
     /** @return HasMany<User, $this> */
