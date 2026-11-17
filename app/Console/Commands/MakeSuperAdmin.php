@@ -11,8 +11,9 @@ use function Laravel\Prompts\password;
 use function Laravel\Prompts\text;
 
 /**
- * The only way to grant master-panel access (is_super_admin is not mass-assignable).
- * Creates the account if the email is new, otherwise promotes the existing one.
+ * Bootstrap or recover a master administrator (is_super_admin is not mass-assignable).
+ * Afterwards, administrators can add each other from /admin → Administrator.
+ * Matches only global accounts (no KSM): a village user with the same email is untouched.
  */
 #[Signature('app:super-admin {email? : Email of the administrator}')]
 #[Description('Create or promote a master (/admin) administrator')]
@@ -20,20 +21,23 @@ class MakeSuperAdmin extends Command
 {
     public function handle(): int
     {
-        $email = $this->argument('email') ?? text('Email', required: true, validate: fn (string $v) => filter_var($v, FILTER_VALIDATE_EMAIL) ? null : 'Email tidak valid.');
+        $email = mb_strtolower(trim((string) ($this->argument('email') ?? text(
+            'Email',
+            required: true,
+            validate: fn (string $v) => filter_var($v, FILTER_VALIDATE_EMAIL) ? null : 'Email tidak valid.',
+        ))));
 
-        $user = User::query()->firstWhere('email', $email);
+        $user = User::query()->whereNull('ksm_id')->where('email', $email)->first();
 
         if ($user === null) {
             $user = new User([
                 'name' => text('Nama', required: true),
                 'email' => $email,
-                'password' => password('Kata sandi (min. 10 karakter)', required: true, validate: fn (string $v) => strlen($v) >= 10 ? null : 'Minimal 10 karakter.'),
+                'password' => password('Kata sandi (min. 8 karakter)', required: true, validate: fn (string $v) => strlen($v) >= 8 ? null : 'Minimal 8 karakter.'),
             ]);
         }
 
-        $user->is_super_admin = true;
-        $user->save();
+        $user->forceFill(['is_super_admin' => true, 'aktif' => true, 'peran' => null])->save();
 
         $this->components->info("{$user->email} kini administrator master: ".url('/admin'));
 

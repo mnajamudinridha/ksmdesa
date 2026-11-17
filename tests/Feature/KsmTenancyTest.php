@@ -54,8 +54,7 @@ class KsmTenancyTest extends TestCase
 
     public function test_member_sees_their_ksm_dashboard(): void
     {
-        $pengurus = User::factory()->create();
-        $pengurus->ksm()->attach($this->makmurjaya);
+        $pengurus = User::factory()->for($this->makmurjaya)->admin()->create();
 
         $this->actingAs($pengurus)
             ->get('http://makmurjaya.ksmdesa.test/')
@@ -66,8 +65,7 @@ class KsmTenancyTest extends TestCase
     public function test_member_of_one_ksm_cannot_open_another(): void
     {
         $lain = Ksm::factory()->create(['slug' => 'beruntungjaya']);
-        $pengurus = User::factory()->create();
-        $pengurus->ksm()->attach($lain);
+        $pengurus = User::factory()->for($lain)->admin()->create();
 
         $this->actingAs($pengurus)
             ->get('http://makmurjaya.ksmdesa.test/')
@@ -81,18 +79,32 @@ class KsmTenancyTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_super_admin_can_open_any_ksm_and_the_master_panel(): void
+    public function test_super_admin_can_open_any_ksm(): void
     {
-        $admin = User::factory()->superAdmin()->create();
+        $this->actingAs(User::factory()->superAdmin()->create())
+            ->get('http://makmurjaya.ksmdesa.test/')
+            ->assertOk();
+    }
 
-        $this->actingAs($admin)->get('http://makmurjaya.ksmdesa.test/')->assertOk();
-        $this->actingAs($admin)->get('http://ksmdesa.test/admin')->assertOk();
+    // One panel per test: Filament keeps panel state in the app instance, which a real
+    // request never shares with another (each request is a fresh PHP process).
+    public function test_super_admin_can_open_the_master_panel(): void
+    {
+        $this->actingAs(User::factory()->superAdmin()->create())
+            ->get('http://ksmdesa.test/admin')
+            ->assertOk();
+    }
+
+    public function test_inactive_user_is_refused_even_with_a_session(): void
+    {
+        $this->actingAs(User::factory()->for($this->makmurjaya)->admin()->nonaktif()->create())
+            ->get('http://makmurjaya.ksmdesa.test/')
+            ->assertForbidden();
     }
 
     public function test_ksm_member_cannot_use_the_master_panel(): void
     {
-        $pengurus = User::factory()->create();
-        $pengurus->ksm()->attach($this->makmurjaya);
+        $pengurus = User::factory()->for($this->makmurjaya)->admin()->create();
 
         $this->actingAs($pengurus)->get('http://ksmdesa.test/admin')->assertForbidden();
     }

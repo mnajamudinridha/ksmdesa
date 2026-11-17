@@ -29,8 +29,7 @@ class IuranModuleTest extends TestCase
 
         $this->ksm = Ksm::factory()->create(['slug' => 'makmurjaya']);
 
-        $pengurus = User::factory()->create();
-        $pengurus->ksm()->attach($this->ksm);
+        $pengurus = User::factory()->for($this->ksm)->admin()->create();
         $this->actingAs($pengurus);
 
         Filament::setCurrentPanel('ksm');

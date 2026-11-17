@@ -42,6 +42,11 @@ class RekapIuran extends Page implements HasTable
     #[Url]
     public ?int $tahun = null;
 
+    public static function canAccess(): bool
+    {
+        return (bool) auth()->user()?->isAdminKsm();
+    }
+
     public function mount(): void
     {
         $this->tahun ??= $this->tahunTersedia()[0];

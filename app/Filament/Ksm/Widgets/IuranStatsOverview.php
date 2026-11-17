@@ -11,6 +11,11 @@ class IuranStatsOverview extends StatsOverviewWidget
 {
     protected static ?int $sort = 1;
 
+    public static function canView(): bool
+    {
+        return (bool) auth()->user()?->isAdminKsm();
+    }
+
     protected function getStats(): array
     {
         $ringkasan = new RingkasanIuran(Filament::getTenant());

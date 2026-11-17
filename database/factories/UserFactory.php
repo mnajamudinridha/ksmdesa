@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\PeranPengguna;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -34,13 +35,44 @@ class UserFactory extends Factory
     }
 
     /**
-     * Master-site administrator: may use /admin and enter every KSM.
+     * Master administrator: belongs to no KSM, may use /admin and enter every KSM.
      */
     public function superAdmin(): static
     {
         return $this->state(fn (array $attributes) => [
             'is_super_admin' => true,
+            'ksm_id' => null,
+            'peran' => null,
         ]);
+    }
+
+    /** Village user with a role; combine with ->for($ksm). */
+    public function peran(PeranPengguna $peran): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'peran' => $peran,
+            'no_hp' => '08'.fake()->unique()->numerify('##########'),
+        ]);
+    }
+
+    public function admin(): static
+    {
+        return $this->peran(PeranPengguna::Admin);
+    }
+
+    public function petugas(): static
+    {
+        return $this->peran(PeranPengguna::Petugas);
+    }
+
+    public function warga(): static
+    {
+        return $this->peran(PeranPengguna::Warga);
+    }
+
+    public function nonaktif(): static
+    {
+        return $this->state(fn (array $attributes) => ['aktif' => false]);
     }
 
     /**

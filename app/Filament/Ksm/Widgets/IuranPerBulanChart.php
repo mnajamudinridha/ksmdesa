@@ -19,6 +19,11 @@ class IuranPerBulanChart extends ChartWidget
 
     protected ?string $maxHeight = '280px';
 
+    public static function canView(): bool
+    {
+        return (bool) auth()->user()?->isAdminKsm();
+    }
+
     protected function getData(): array
     {
         $ringkasan = new RingkasanIuran(Filament::getTenant());

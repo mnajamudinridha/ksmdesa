@@ -2,10 +2,9 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Ksm;
+use App\Support\KsmDariHost;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -18,15 +17,7 @@ class EnsureKsmSubdomain
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $apex = (string) config('app.domain');
-        $slug = Str::beforeLast($request->getHost(), '.'.$apex);
-
-        abort_if(
-            $slug === $request->getHost()               // apex itself, or a foreign host
-            || str_contains($slug, '.')                 // deeper than one label
-            || ! Ksm::query()->where('slug', $slug)->exists(),
-            404,
-        );
+        abort_if(KsmDariHost::dariRequest() === null, 404);
 
         return $next($request);
     }

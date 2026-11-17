@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Ksms\Tables;
 
 use App\Models\Ksm;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -15,6 +16,10 @@ class KsmsTable
             ->modifyQueryUsing(fn ($query) => $query->withCount(['pelanggan', 'users']))
             ->defaultSort('nama')
             ->columns([
+                ImageColumn::make('logo')
+                    ->label('')
+                    ->disk('public')
+                    ->circular(),
                 TextColumn::make('nama')
                     ->label('KSM')
                     ->description(fn (Ksm $record): string => 'Desa '.$record->desa)
@@ -31,7 +36,7 @@ class KsmsTable
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('users_count')
-                    ->label('Pengurus')
+                    ->label('Pengguna')
                     ->numeric(),
                 TextColumn::make('created_at')
                     ->label('Dibuat')

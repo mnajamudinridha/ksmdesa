@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Ksms\Schemas;
 
+use App\Filament\Shared\LogoKsmField;
 use App\Support\SubdomainSlug;
 use Closure;
 use Filament\Forms\Components\TextInput;
@@ -43,6 +44,8 @@ class KsmForm
                     })
                     ->suffix('.'.config('app.domain'))
                     ->helperText('Alamat panel KSM. Mengubahnya memutus tautan & login lama.'),
+                LogoKsmField::make()
+                    ->columnSpanFull(),
             ]);
     }
 }

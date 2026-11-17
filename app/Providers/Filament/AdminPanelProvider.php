@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\AvatarProviders\InisialAvatar;
+use App\Filament\Shared\ProfilSaya;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -29,6 +31,9 @@ class AdminPanelProvider extends PanelProvider
             ->domain(config('app.domain'))
             ->path('admin')
             ->login()
+            ->profile(ProfilSaya::class, isSimple: false)
+            // Initials drawn locally: the default provider would send names to ui-avatars.com.
+            ->defaultAvatarProvider(InisialAvatar::class)
             ->brandName('KSM Desa — Master')
             ->colors([
                 'primary' => Color::Green,
