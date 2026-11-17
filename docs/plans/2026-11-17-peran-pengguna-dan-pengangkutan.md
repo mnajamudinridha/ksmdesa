@@ -1,6 +1,6 @@
 # Blueprint: Peran pengguna, detail pelanggan, dan pengangkutan harian
 
-Status: **RENCANA — belum dieksekusi.** Disusun dengan skill `planning-filament` (Filament Blueprint v2.4).
+Status: **Fase 1 SELESAI & live (commit a5a60cc, 2026-11-17)** — termasuk §3.8 (administrator pusat) dan §3.9 (foto akun). Fase 2–3 belum. Disusun dengan skill `planning-filament` (Filament Blueprint v2.4).
 Versi terpasang yang diverifikasi: Laravel 13.42.0 · Filament 5.11.4 · Livewire 4.4.8 · PHPUnit 12 (bukan Pest).
 Sumber verifikasi: Boost `search-docs` + kode sumber terpasang di `vendor/` (rujukan baris disebut di tiap bagian).
 
@@ -442,6 +442,18 @@ Resource: App\Filament\Resources\Users\UserResource (panel admin/master, BARU)
 - Login: bila input bukan email dan `NomorHp::normalisasi()` menghasilkan `null`, atau KSM host `null`, closure kredensial
   memakai kondisi mustahil (`whereRaw('1 = 0')`). Tanpa ini, `where('no_hp', null)` menjadi `whereNull` dan bisa mencocokkan
   pengguna desa yang belum punya nomor HP (mis. hasil migrasi pivot).
+
+### 3.9 Amandemen: foto akun (dikerjakan di Fase 1)
+- `users.avatar` (disk privat `local`, folder `avatar/`, URL bertanda tangan 1 jam via `temporaryUrl`); `User` implements `HasAvatar`.
+- Diunggah admin (form pengguna desa & master) dan oleh pengguna sendiri di **Profil saya** (`/profil-saya`: foto + kata sandi;
+  nama/HP/email/peran hanya tampil). Profil KSM pindah ke slug `/profil-ksm` (slug bawaan `profile` bentrok dengan profil pengguna).
+- Avatar inisial digambar lokal (`App\Filament\AvatarProviders\InisialAvatar`, SVG data URI) — bawaan Filament memanggil ui-avatars.com.
+- Global `FileUpload::configureUsing(->preventFilePathTampering())` (disk privat juga berisi CSV buku iuran).
+
+### 3.10 Keputusan untuk Fase 2 (dari pemilik, 2026-11-17)
+- Foto di daftar pelanggan = foto **akun warga** yang terhubung.
+- **Setiap pelanggan otomatis punya akun warga** — aturan pembuatan otomatis (nomor HP, kata sandi awal, pelanggan tanpa
+  nomor HP, satu orang banyak pelanggan) **masih perlu diputuskan** sebelum Fase 2 dieksekusi.
 
 ---
 
