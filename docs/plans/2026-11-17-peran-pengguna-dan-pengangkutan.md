@@ -452,8 +452,13 @@ Resource: App\Filament\Resources\Users\UserResource (panel admin/master, BARU)
 
 ### 3.10 Keputusan untuk Fase 2 (dari pemilik, 2026-11-17)
 - Foto di daftar pelanggan = foto **akun warga** yang terhubung.
-- **Setiap pelanggan otomatis punya akun warga** — aturan pembuatan otomatis (nomor HP, kata sandi awal, pelanggan tanpa
-  nomor HP, satu orang banyak pelanggan) **masih perlu diputuskan** sebelum Fase 2 dieksekusi.
+- **Setiap pelanggan otomatis punya akun warga** yang langsung bisa login.
+- **Kata sandi awal = sandi default per desa** (keputusan pemilik): admin desa mengaturnya di **Profil KSM**; akun warga yang
+  dibuat otomatis memakai sandi itu. Rancangan: simpan sebagai hash (`ksm.sandi_default_hash`, tak pernah plaintext), akun baru
+  mendapat hash yang sama; field kosong saat simpan = tidak diubah.
+- Sub-keputusan yang ditanyakan di awal Fase 2: (a) pelanggan tanpa nomor HP — akun dibuat tapi belum bisa login, atau nomor HP
+  wajib; (b) nomor HP sama di beberapa pelanggan = satu akun; (c) mengganti sandi default: hanya untuk akun baru, atau juga akun
+  yang belum pernah ganti sandi; (d) rekomendasi keamanan: wajib ganti sandi saat login pertama (sandi default diketahui banyak orang).
 
 ---
 
