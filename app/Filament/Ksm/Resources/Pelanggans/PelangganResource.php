@@ -7,6 +7,7 @@ use App\Filament\AvatarProviders\InisialAvatar;
 use App\Filament\Ksm\Resources\Pelanggans\Pages\ManagePelanggans;
 use App\Filament\Shared\AvatarField;
 use App\Filament\Shared\PenggunaForm;
+use App\Filament\Shared\PilihanMaster;
 use App\Filament\Shared\PilihanPengguna;
 use App\Models\Pelanggan;
 use App\Models\TarifLayanan;
@@ -72,7 +73,7 @@ class PelangganResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery()->with(['akunWarga', 'petugas', 'tarifLayanan']);
+        $query = parent::getEloquentQuery()->with(['akunWarga', 'petugas', 'tarifLayanan', 'wilayah']);
         $user = auth()->user();
 
         return match (true) {
@@ -195,12 +196,15 @@ class PelangganResource extends Resource
                             ->rows(2)
                             ->maxLength(1000)
                             ->columnSpanFull(),
-                        TextInput::make('rt')
-                            ->label('RT')
-                            ->maxLength(20),
-                        TextInput::make('rw')
-                            ->label('RW')
-                            ->maxLength(10),
+                        Select::make('wilayah_id')
+                            ->label('RT / RW')
+                            // Options = this KSM's RTs: the built-in "in" rule rejects any other id.
+                            ->options(fn (?Pelanggan $record): array => PilihanMaster::wilayah($record?->wilayah_id))
+                            ->searchable()
+                            ->preload()
+                            ->placeholder('Belum ditetapkan')
+                            ->helperText(fn (): ?string => PilihanMaster::wilayah() === [] ? 'Isi daftar RT/RW di Data Master → Wilayah (RT/RW).' : null)
+                            ->columnSpanFull(),
                         TextInput::make('patokan')
                             ->placeholder('mis. depan masjid, pagar hijau')
                             ->maxLength(255)
@@ -358,11 +362,9 @@ class PelangganResource extends Resource
                 TextEntry::make('alamat')
                     ->placeholder('—')
                     ->columnSpanFull(),
-                TextEntry::make('rt')
-                    ->label('RT')
-                    ->placeholder('—'),
-                TextEntry::make('rw')
-                    ->label('RW')
+                TextEntry::make('wilayah')
+                    ->label('RT / RW')
+                    ->state(fn (Pelanggan $record): ?string => $record->wilayah?->label())
                     ->placeholder('—'),
                 TextEntry::make('catatan_pengangkutan')
                     ->label('Catatan untuk petugas')
@@ -400,10 +402,11 @@ class PelangganResource extends Resource
                     ->limit(40)
                     ->placeholder('—')
                     ->toggleable(),
-                TextColumn::make('rt')
-                    ->label('RT')
+                TextColumn::make('wilayah_label')
+                    ->label('RT / RW')
+                    ->state(fn (Pelanggan $record): ?string => $record->wilayah?->label())
                     ->placeholder('—')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
                 TextColumn::make('petugas.name')
                     ->label('Petugas')
                     ->placeholder('— belum ada —')
@@ -424,6 +427,14 @@ class PelangganResource extends Resource
             ->filters([
                 TernaryFilter::make('aktif')
                     ->default(true),
+                SelectFilter::make('wilayah_id')
+                    ->label('RT / RW')
+                    // Explicit options: ->relationship() would load every KSM's RTs.
+                    ->options(fn (): array => PilihanMaster::wilayah()),
+                Filter::make('tanpa_rt')
+                    ->label('Tanpa RT')
+                    ->toggle()
+                    ->query(fn (Builder $query): Builder => $query->whereNull('wilayah_id')),
                 SelectFilter::make('petugas_id')
                     ->label('Petugas')
                     ->options(fn (): array => PilihanPengguna::petugas())

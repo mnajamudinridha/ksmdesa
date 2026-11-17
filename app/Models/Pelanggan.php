@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[Table('pelanggan')]
 #[Fillable([
-    'tarif_layanan_id', 'petugas_id', 'nomor_urut', 'nama', 'iuran_bulanan', 'alamat', 'rt', 'rw',
+    'tarif_layanan_id', 'wilayah_id', 'petugas_id', 'nomor_urut', 'nama', 'iuran_bulanan', 'alamat',
     'patokan', 'latitude', 'longitude', 'aktif', 'catatan', 'catatan_pengangkutan',
 ])]
 class Pelanggan extends Model
@@ -60,6 +60,12 @@ class Pelanggan extends Model
     public function tarifLayanan(): BelongsTo
     {
         return $this->belongsTo(TarifLayanan::class);
+    }
+
+    /** @return BelongsTo<Wilayah, $this> */
+    public function wilayah(): BelongsTo
+    {
+        return $this->belongsTo(Wilayah::class);
     }
 
     /** @return BelongsTo<User, $this> */

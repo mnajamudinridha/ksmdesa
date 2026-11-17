@@ -44,7 +44,7 @@ class DaftarTugasHariIni extends TableWidget
                 ->whereBelongsTo(Filament::getTenant())
                 ->where('petugas_id', auth()->id())
                 ->where('aktif', true)
-                ->with(['ksm', 'akunWarga'])
+                ->with(['ksm', 'akunWarga', 'wilayah'])
                 ->addSelect(['dibayar_bulan_ini' => PembayaranIuran::query()
                     ->selectRaw('sum(nominal)')
                     ->whereColumn('pembayaran_iuran.pelanggan_id', 'pelanggan.id')
@@ -68,7 +68,7 @@ class DaftarTugasHariIni extends TableWidget
                     ->description(fn (Pelanggan $record): ?string => $record->patokan)
                     ->searchable(),
                 TextColumn::make('alamat')
-                    ->description(fn (Pelanggan $record): ?string => filled($record->rt) ? "RT {$record->rt}".(filled($record->rw) ? " / RW {$record->rw}" : '') : null)
+                    ->description(fn (Pelanggan $record): ?string => $record->wilayah?->label())
                     ->placeholder('—')
                     ->wrap(),
                 TextColumn::make('akunWarga.no_hp')
