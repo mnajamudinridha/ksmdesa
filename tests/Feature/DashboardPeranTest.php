@@ -6,6 +6,7 @@ use App\Enums\StatusPengangkutan;
 use App\Filament\Ksm\Widgets\BeratPerHariChart;
 use App\Filament\Ksm\Widgets\DaftarTugasHariIni;
 use App\Filament\Ksm\Widgets\IuranStatsOverview;
+use App\Filament\Ksm\Widgets\KomposisiPengeluaranChart;
 use App\Filament\Ksm\Widgets\OperasionalStatsOverview;
 use App\Filament\Ksm\Widgets\RiwayatIuranSaya;
 use App\Filament\Ksm\Widgets\RiwayatPengangkutanSaya;
@@ -82,7 +83,7 @@ class DashboardPeranTest extends TestCase
      */
     public static function widgetPerPeran(): array
     {
-        $admin = [IuranStatsOverview::class, OperasionalStatsOverview::class, BeratPerHariChart::class];
+        $admin = [IuranStatsOverview::class, OperasionalStatsOverview::class, BeratPerHariChart::class, KomposisiPengeluaranChart::class];
         $petugas = [TugasPetugasStatsOverview::class, DaftarTugasHariIni::class];
         $warga = [WargaStatsOverview::class, RiwayatIuranSaya::class, RiwayatPengangkutanSaya::class];
 

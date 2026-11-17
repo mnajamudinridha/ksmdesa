@@ -2,12 +2,16 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\AktivitasMaterial;
+use App\Enums\FormatAngka;
+use App\Models\CatatanMaterial;
 use App\Models\Ksm;
 use App\Models\Pelanggan;
 use App\Models\PembayaranIuran;
 use App\Models\Pengangkutan;
 use App\Models\PengangkutanRincian;
 use App\Support\Hari;
+use App\Support\Indikator;
 use App\Support\RingkasanIuran;
 use App\Support\RingkasanPengangkutan;
 use Filament\Support\Icons\Heroicon;
@@ -37,6 +41,11 @@ class RingkasanMasterStats extends StatsOverviewWidget
         $kg = (float) PengangkutanRincian::query()
             ->whereIn('pengangkutan_id', Pengangkutan::query()->whereDate('tanggal', '>=', Hari::tanggal(29))->select('id'))
             ->sum('perkiraan_kg');
+        $terpulihkan = round((float) CatatanMaterial::query()
+            ->whereIn('aktivitas', [AktivitasMaterial::Pilah, AktivitasMaterial::Olah])
+            ->whereDate('tanggal', '>=', Hari::tanggal(29))
+            ->sum('berat_kg'), 1);
+        $pemulihan = RingkasanPengangkutan::bagi($terpulihkan, $kg);
 
         return [
             Stat::make('KSM terdaftar', Ksm::query()->count())
@@ -59,6 +68,14 @@ class RingkasanMasterStats extends StatsOverviewWidget
                 ->description('perkiraan dari catatan petugas')
                 ->descriptionIcon(Heroicon::Scale)
                 ->color('success'),
+            Stat::make('Material terpulihkan 30 hari', RingkasanPengangkutan::kg($terpulihkan))
+                ->description(match (true) {
+                    $terpulihkan == 0.0 => 'belum ada catatan pilah/olah',
+                    $pemulihan === null => 'belum ada sampah terangkut',
+                    default => 'tingkat pemulihan '.FormatAngka::Persen->tampil($pemulihan),
+                })
+                ->descriptionIcon(Heroicon::ArrowPath)
+                ->color($terpulihkan == 0.0 ? 'gray' : Indikator::warna($pemulihan)),
         ];
     }
 }

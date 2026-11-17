@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\StatusPengangkutan;
 use App\Filament\Widgets\IuranSemuaKsmChart;
 use App\Filament\Widgets\RingkasanMasterStats;
 use App\Filament\Widgets\RingkasanPerKsmTable;
@@ -9,6 +10,8 @@ use App\Models\CatatanMaterial;
 use App\Models\Ksm;
 use App\Models\Pelanggan;
 use App\Models\PembayaranIuran;
+use App\Models\Pengangkutan;
+use App\Models\PengangkutanRincian;
 use App\Models\TransaksiKas;
 use App\Models\User;
 use App\Support\TerimaIuran;
@@ -69,6 +72,26 @@ class DasborMasterTest extends TestCase
         $stat = $this->nilaiStat($widget);
         $this->assertSame(['3', 'Rp50.000', 'Rp80.000'], [$stat['KSM terdaftar'], $stat['Iuran November 2026'], $stat['Di tangan petugas']]);
         $widget->assertSee('1 aktif mencatat 7 hari terakhir');
+    }
+
+    public function test_recovered_material_card_counts_sorted_and_processed_of_every_ksm_in_30_days(): void
+    {
+        $tanpaMaterial = Livewire::test(RingkasanMasterStats::class);
+        CatatanMaterial::factory()->for($this->a)->create(['tanggal' => '2026-11-12', 'berat_kg' => 40]);
+        CatatanMaterial::factory()->for($this->b)->olah()->create(['tanggal' => '2026-11-16', 'berat_kg' => 20]);
+        CatatanMaterial::factory()->for($this->a)->jual()->create(['tanggal' => '2026-11-14', 'berat_kg' => 30]);
+        CatatanMaterial::factory()->for($this->c)->create(['tanggal' => '2026-10-18', 'berat_kg' => 99]);
+        $tanpaSampah = Livewire::test(RingkasanMasterStats::class);
+        $ronde = Pengangkutan::factory()->for($this->c)->create(['tanggal' => '2026-11-15']);
+        PengangkutanRincian::factory()->for($ronde)->create(['pelanggan_id' => Pelanggan::factory()->for($this->c)->create()->id, 'status' => StatusPengangkutan::Diangkut, 'perkiraan_kg' => 120]);
+
+        $widget = Livewire::test(RingkasanMasterStats::class);
+
+        $tanpaMaterial->assertSee('belum ada catatan pilah/olah');
+        $tanpaSampah->assertSee('belum ada sampah terangkut');
+        $this->assertSame('60,0 kg', $this->nilaiStat($widget)['Material terpulihkan 30 hari']);
+        $this->assertCount(6, $this->nilaiStat($widget));
+        $widget->assertSee('tingkat pemulihan 50%');
     }
 
     public function test_table_marks_and_filters_ksms_that_have_not_recorded_recently(): void

@@ -24,4 +24,17 @@ final class Hari
     {
         return self::ini()->subDays($mundur)->toDateString();
     }
+
+    /** A Y-m-d date as people say it: "hari ini", "kemarin", "Senin, 16 November" (with the year when it is not this year's). */
+    public static function sebut(string $tanggal): string
+    {
+        $hari = CarbonImmutable::parse($tanggal, (string) config('app.zona_waktu_lokal'))->startOfDay();
+
+        return match (true) {
+            $hari->toDateString() === self::tanggal() => 'hari ini',
+            $hari->toDateString() === self::tanggal(1) => 'kemarin',
+            $hari->year === self::ini()->year => $hari->translatedFormat('l, j F'),
+            default => $hari->translatedFormat('l, j F Y'),
+        };
+    }
 }

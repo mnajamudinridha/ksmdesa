@@ -275,6 +275,46 @@ final class RingkasanPengangkutan
             ->all();
     }
 
+    /**
+     * Names of this KSM's active petugas with no round recorded on $tanggal; null when the KSM
+     * has no active petugas at all. (A petugas account belongs to one KSM, so its rounds do too.)
+     *
+     * @return ?Collection<int, string>
+     */
+    public function petugasBelumMencatat(string $tanggal): ?Collection
+    {
+        $petugasAktif = User::query()->whereBelongsTo($this->ksm)->where('peran', PeranPengguna::Petugas)->where('aktif', true);
+
+        if (! $petugasAktif->clone()->exists()) {
+            return null;
+        }
+
+        return $petugasAktif
+            ->whereDoesntHave('pengangkutan', fn (Builder $ronde) => $ronde->whereDate('tanggal', $tanggal))
+            ->orderBy('name')
+            ->pluck('name');
+    }
+
+    /** Y-m-d of the latest round this petugas recorded in this KSM; null when none. */
+    public function rondeTerakhirOleh(User $petugas): ?string
+    {
+        $tanggal = Pengangkutan::query()->whereBelongsTo($this->ksm)->where('petugas_id', $petugas->getKey())->max('tanggal');
+
+        return $tanggal === null ? null : substr((string) $tanggal, 0, 10);
+    }
+
+    /** Y-m-d of the latest day waste was collected from one of this warga's houses in this KSM; null when none. */
+    public function diangkutTerakhirUntuk(User $warga): ?string
+    {
+        $tanggal = PengangkutanRincian::query()
+            ->where('status', StatusPengangkutan::Diangkut)
+            ->whereIn('pelanggan_id', $warga->pelangganMilik()->whereBelongsTo($this->ksm)->select('id'))
+            ->join('pengangkutan', 'pengangkutan.id', '=', 'pengangkutan_rincian.pengangkutan_id')
+            ->max('pengangkutan.tanggal');
+
+        return $tanggal === null ? null : substr((string) $tanggal, 0, 10);
+    }
+
     public static function kg(float $kg): string
     {
         return Number::format($kg, precision: 1, locale: 'id').' kg';

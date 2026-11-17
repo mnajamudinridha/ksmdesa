@@ -53,6 +53,26 @@ class WargaStatsOverview extends StatsOverviewWidget
         })->all();
     }
 
+    /**
+     * One card per house, so the count varies: as many columns as cards up to four (Filament's
+     * default puts one or two cards in a three-column row and leaves the rest empty), then rows
+     * of four or three.
+     *
+     * @return array<string, int>
+     */
+    protected function getColumns(): array
+    {
+        $jumlah = count($this->getCachedStats());
+
+        $kolom = match (true) {
+            $jumlah <= 4 => max($jumlah, 1),
+            $jumlah % 4 === 0 => 4,
+            default => 3,
+        };
+
+        return ['@xl' => $kolom, '!@lg' => $kolom];
+    }
+
     private function petugas(Pelanggan $rumah): string
     {
         if (! $rumah->punyaPetugasAktif()) {

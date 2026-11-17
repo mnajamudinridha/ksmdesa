@@ -7,6 +7,7 @@ use App\Filament\Ksm\Pages\Analitik\AnalitikKeuangan;
 use App\Filament\Ksm\Pages\Laporan\LaporanKeuanganPage;
 use App\Filament\Ksm\Widgets\KeuanganStats;
 use App\Filament\Ksm\Widgets\KomposisiPemasukanChart;
+use App\Filament\Ksm\Widgets\KomposisiPengeluaranChart;
 use App\Models\KategoriTransaksi;
 use App\Models\Ksm;
 use App\Models\Mitra;
@@ -159,6 +160,18 @@ class RingkasanKasTest extends TestCase
 
         $this->assertSame(['Iuran', 'Dukungan mitra'], $data['labels']);
         $this->assertSame([90_000, 200_000], $data['datasets'][0]['data']);
+    }
+
+    public function test_spending_chart_has_one_slice_per_category_of_this_ksm_and_says_when_there_is_none(): void
+    {
+        $november = Livewire::test(KomposisiPengeluaranChart::class, ['pageFilters' => ['tahun' => '2026', 'bulan' => '11']])->instance();
+        $september = Livewire::test(KomposisiPengeluaranChart::class, ['pageFilters' => ['tahun' => '2026', 'bulan' => '9']])->instance();
+        $data = (fn (): array => $this->getData())->call($november);
+
+        $this->assertSame(['BBM'], $data['labels']);
+        $this->assertSame([150_000], $data['datasets'][0]['data']);
+        $this->assertSame('November 2026', $november->getDescription());
+        $this->assertSame('Belum ada pengeluaran pada periode ini.', $september->getDescription());
     }
 
     public function test_excel_report_matches_the_cash_summary_and_keeps_user_text_out_of_formulas(): void
