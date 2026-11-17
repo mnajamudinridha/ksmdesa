@@ -185,6 +185,7 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
   `filament:optimize` → `up` → health check (apex `/up` `/` `/admin/login` 200, `/admin` 302; subdomain uji `/up` 200,
   `/admin/login` 404; `/login` di apex 404). Gagal = situs tetap maintenance + pesan rollback.
 - Pesan `public/storage link already exists` saat deploy = normal.
+- Data Master bawaan (20 jenis material + kategori Buku Kas) untuk KSM: `php artisan app:data-master-bawaan {slug?*}` (kosong = semua KSM; hanya menambah nama yang belum ada — aman diulang). Sengaja **tanpa** kategori pemasukan "Iuran"/"Penjualan material" (sudah dihitung otomatis oleh `RingkasanKas`). Dijalankan di produksi atas permintaan pemilik 2026-11-17.
 - Admin pusat pertama: `php artisan app:super-admin`. Impor buku iuran: `php artisan app:import-iuran {ksm} {file}`.
   Akun warga untuk pelanggan lama: `php artisan app:akun-warga {ksm}` (idempoten).
 - Wildcard subdomain: DNS `*` + alias server + sertifikat wildcard (detail di catatan server privat).
