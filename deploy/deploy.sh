@@ -26,7 +26,11 @@ log() { printf '[%s] %s\n' "$(date '+%F %T')" "$*"; }
 die() { log "GAGAL: $*"; exit 1; }
 
 [ "$(id -un)" = ksmdesa ] || die "jalankan sebagai user ksmdesa (root: sudo -u ksmdesa $0)"
+# DB dumps and logs are private: DA's default umask (002) would leave them world-readable.
+# Lock the directories instead of a global `umask 077`, which would make the built assets
+# (public/build, public/css/filament) unreadable to the web server and break the site.
 mkdir -p "$DEPLOY_DIR/backups" "$DEPLOY_DIR/logs"
+chmod 700 "$DEPLOY_DIR" "$DEPLOY_DIR/backups" "$DEPLOY_DIR/logs"
 exec 9>"$DEPLOY_DIR/.lock"
 flock -n 9 || die "deploy lain sedang berjalan"
 cd "$APP_DIR"
@@ -61,7 +65,7 @@ git --no-pager log --oneline "$CURRENT..$TARGET" 2>/dev/null | head -30 || true
 # 1. Backup DB before anything changes. Rolling back code does NOT undo migrations;
 #    this dump is the only way back for data. --no-tablespaces: app user lacks PROCESS.
 DUMP="$DEPLOY_DIR/backups/db-$(date +%Y%m%d-%H%M%S)-${CURRENT:0:7}.sql.gz"
-mysqldump --no-tablespaces --single-transaction --routines --triggers "$DB_NAME" | gzip > "$DUMP"
+( umask 077; mysqldump --no-tablespaces --single-transaction --routines --triggers "$DB_NAME" | gzip > "$DUMP" )
 zcat "$DUMP" | tail -n 1 | grep -q "Dump completed" || die "backup DB tidak lengkap: $DUMP"
 log "backup DB: $DUMP ($(du -h "$DUMP" | cut -f1))"
 ls -1t "$DEPLOY_DIR"/backups/db-*.sql.gz | tail -n +$((KEEP_BACKUPS + 1)) | xargs -r rm --
