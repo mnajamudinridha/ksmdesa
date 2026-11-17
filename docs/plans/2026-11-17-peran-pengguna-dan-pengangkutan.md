@@ -21,6 +21,8 @@ Sumber verifikasi: Boost `search-docs` + kode sumber terpasang di `vendor/` (ruj
 | Logo desa | Diunggah super admin (form KSM) **dan** admin desa (halaman "Profil KSM"). Tampil di halaman login subdomain dan di aplikasi desa. |
 | Zona waktu "hari ini" | **Asumsi: WITA (`Asia/Makassar`)** via `APP_ZONA_WAKTU`. Ubah satu baris `.env` bila desa di WIB. Penyimpanan timestamp tetap UTC. |
 
+> **Keputusan pemilik 2026-11-17 (setelah Fase 3):** warga SELALU lahir dari Pelanggan (akunnya dibuat/ditautkan otomatis); menu Pengguna (desa & master KSM → Pengguna) hanya untuk admin & petugas — akun warga tidak tampil dan peran warga ditolak di sana. Foto, nomor HP, email, kata sandi, dan "akun bisa login" akun warga diubah dari form Pelanggan; field itu hanya berlaku untuk akun yang sedang ditampilkan (atau akun baru saat create), tidak pernah ke akun orang lain yang ditautkan lewat nomor, dan tidak pernah ke akun admin/petugas yang juga pelanggan. Aksi baris semua resource memakai menu titik tiga (ActionGroup); Profil KSM, form KSM master, dan Profil saya memakai Section.
+
 ## Fase eksekusi
 
 Tiap fase selesai dengan: test hijau (juga dengan `route:cache`), Pint, audit `filament-security-audit`, commit, deploy, cek produksi.

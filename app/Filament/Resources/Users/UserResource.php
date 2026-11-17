@@ -9,6 +9,7 @@ use App\Filament\Shared\AvatarField;
 use App\Models\User;
 use BackedEnum;
 use Closure;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -116,8 +117,10 @@ class UserResource extends Resource
                     ->sortable(),
             ])
             ->recordActions([
-                EditAction::make(),
-                AlihAktifAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    AlihAktifAction::make(),
+                ]),
             ]);
     }
 

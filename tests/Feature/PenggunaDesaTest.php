@@ -119,7 +119,7 @@ class PenggunaDesaTest extends TestCase
     public function test_admin_cannot_demote_or_deactivate_themselves(): void
     {
         Livewire::test(ManageUsers::class)
-            ->callAction(TestAction::make('edit')->table($this->admin), data: ['peran' => PeranPengguna::Warga->value, 'aktif' => false])
+            ->callAction(TestAction::make('edit')->table($this->admin), data: ['peran' => PeranPengguna::Petugas->value, 'aktif' => false])
             ->assertHasNoFormErrors()
             ->assertActionHidden(TestAction::make('alihAktif')->table($this->admin));
 

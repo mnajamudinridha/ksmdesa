@@ -11,9 +11,9 @@ use Filament\Forms\Components\FileUpload;
  */
 final class AvatarField
 {
-    public static function make(): FileUpload
+    public static function make(string $name = 'avatar'): FileUpload
     {
-        return FileUpload::make('avatar')
+        return FileUpload::make($name)
             ->label('Foto')
             ->avatar()
             ->image()

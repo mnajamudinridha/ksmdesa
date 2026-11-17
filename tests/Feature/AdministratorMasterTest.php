@@ -74,6 +74,19 @@ class AdministratorMasterTest extends TestCase
     public function test_master_adds_a_user_to_a_ksm(): void
     {
         $ksm = Ksm::factory()->create();
+        $warga = User::factory()->for($ksm)->warga()->create();
+
+        Livewire::test(UsersRelationManager::class, ['ownerRecord' => $ksm, 'pageClass' => EditKsm::class])
+            // Warga accounts belong to customers (KSM panel → Pelanggan), not to this list.
+            ->assertCanNotSeeTableRecords([$warga])
+            ->callAction(TestAction::make('create')->table(), data: [
+                'name' => 'Warga',
+                'no_hp' => '0812 5555 7777',
+                'password' => 'rahasia123',
+                'peran' => PeranPengguna::Warga->value,
+                'aktif' => true,
+            ])
+            ->assertHasFormErrors(['peran' => 'in']);
 
         Livewire::test(UsersRelationManager::class, ['ownerRecord' => $ksm, 'pageClass' => EditKsm::class])
             ->callAction(TestAction::make('create')->table(), data: [

@@ -6,6 +6,7 @@ use App\Filament\Shared\LogoKsmField;
 use App\Filament\Shared\SandiDefaultField;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Tenancy\EditTenantProfile;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 
@@ -34,12 +35,20 @@ class EditProfilKsm extends EditTenantProfile
         return $schema
             ->columns(1)
             ->components([
-                TextInput::make('nama')
-                    ->label('Nama KSM')
-                    ->required()
-                    ->maxLength(255),
-                LogoKsmField::make(),
-                SandiDefaultField::make(),
+                Section::make('Identitas KSM')
+                    ->description('Nama dan logo tampil di halaman login dan di panel KSM.')
+                    ->schema([
+                        TextInput::make('nama')
+                            ->label('Nama KSM')
+                            ->required()
+                            ->maxLength(255),
+                        LogoKsmField::make(),
+                    ]),
+                Section::make('Sandi default warga')
+                    ->description('Akun warga dibuat otomatis dari data pelanggan dan login dengan sandi ini sampai warga menggantinya sendiri.')
+                    ->schema([
+                        SandiDefaultField::make(),
+                    ]),
             ]);
     }
 }

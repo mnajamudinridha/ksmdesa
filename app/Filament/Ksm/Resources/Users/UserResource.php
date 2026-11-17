@@ -9,6 +9,7 @@ use App\Filament\Shared\AlihAktifAction;
 use App\Filament\Shared\PenggunaForm;
 use App\Models\User;
 use BackedEnum;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
 use Filament\Resources\Resource;
@@ -20,6 +21,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 /**
@@ -44,6 +46,12 @@ class UserResource extends Resource
 
     protected static ?string $pluralModelLabel = 'pengguna';
 
+    /** Admins and petugas only; warga accounts are managed with their customer (menu Pelanggan). */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->whereIn('peran', PeranPengguna::staf());
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema
@@ -55,7 +63,7 @@ class UserResource extends Resource
     {
         return $table
             ->recordTitleAttribute('name')
-            ->modifyQueryUsing(fn ($query) => $query->withCount(['pelangganTugas', 'pelangganMilik']))
+            ->modifyQueryUsing(fn ($query) => $query->withCount('pelangganTugas'))
             ->defaultSort('name')
             ->columns([
                 ImageColumn::make('avatar')
@@ -73,13 +81,10 @@ class UserResource extends Resource
                     ->searchable(),
                 TextColumn::make('peran')
                     ->badge(),
-                TextColumn::make('pelanggan')
-                    ->label('Pelanggan')
-                    ->state(fn (User $record): ?int => match ($record->peran) {
-                        PeranPengguna::Petugas => $record->pelanggan_tugas_count,
-                        default => $record->pelanggan_milik_count ?: null,
-                    })
-                    ->tooltip(fn (User $record): string => $record->peran === PeranPengguna::Petugas ? 'Pelanggan yang ditugaskan' : 'Pelanggan milik akun ini')
+                TextColumn::make('pelanggan_tugas_count')
+                    ->label('Rumah tugas')
+                    ->state(fn (User $record): ?int => $record->peran === PeranPengguna::Petugas ? $record->pelanggan_tugas_count : null)
+                    ->tooltip('Pelanggan yang ditugaskan ke petugas ini')
                     ->placeholder('—'),
                 IconColumn::make('aktif')
                     ->boolean(),
@@ -89,13 +94,15 @@ class UserResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('peran')
-                    ->options(PeranPengguna::class),
+                    ->options(collect(PeranPengguna::staf())->mapWithKeys(fn (PeranPengguna $peran): array => [$peran->value => $peran->getLabel()])->all()),
                 TernaryFilter::make('aktif')
                     ->default(true),
             ])
             ->recordActions([
-                EditAction::make(),
-                AlihAktifAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    AlihAktifAction::make(),
+                ]),
             ]);
     }
 

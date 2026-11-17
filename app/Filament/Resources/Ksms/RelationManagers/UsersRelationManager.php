@@ -8,6 +8,7 @@ use App\Filament\Shared\AlihAktifAction;
 use App\Filament\Shared\PenggunaForm;
 use App\Models\Ksm;
 use App\Models\User;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -19,8 +20,9 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 /**
- * Master manages any KSM's users here (admin, petugas, warga). Users belong to exactly
- * one KSM, so there is no attach/detach, and they are deactivated rather than deleted.
+ * Master manages any KSM's admins and petugas here; warga accounts come from customers in
+ * the KSM panel (menu Pelanggan). Users belong to exactly one KSM, so there is no
+ * attach/detach, and they are deactivated rather than deleted.
  */
 class UsersRelationManager extends RelationManager
 {
@@ -43,6 +45,7 @@ class UsersRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('name')
+            ->modifyQueryUsing(fn ($query) => $query->whereIn('peran', PeranPengguna::staf()))
             ->defaultSort('name')
             ->columns([
                 ImageColumn::make('avatar')
@@ -64,14 +67,16 @@ class UsersRelationManager extends RelationManager
             ])
             ->filters([
                 SelectFilter::make('peran')
-                    ->options(PeranPengguna::class),
+                    ->options(collect(PeranPengguna::staf())->mapWithKeys(fn (PeranPengguna $peran): array => [$peran->value => $peran->getLabel()])->all()),
             ])
             ->headerActions([
                 CreateAction::make()->label('Tambah pengguna'),
             ])
             ->recordActions([
-                EditAction::make(),
-                AlihAktifAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    AlihAktifAction::make(),
+                ]),
             ]);
     }
 }

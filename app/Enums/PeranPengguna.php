@@ -17,6 +17,16 @@ enum PeranPengguna: string implements HasColor, HasIcon, HasLabel
     case Petugas = 'petugas';
     case Warga = 'warga';
 
+    /**
+     * Roles managed in the Pengguna menus. Warga accounts come only from customers (Pelanggan).
+     *
+     * @return array<int, self>
+     */
+    public static function staf(): array
+    {
+        return [self::Admin, self::Petugas];
+    }
+
     public function getLabel(): string
     {
         return match ($this) {

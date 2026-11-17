@@ -13,6 +13,7 @@ use App\Models\PengangkutanRincian;
 use App\Support\Hari;
 use BackedEnum;
 use Closure;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
@@ -212,8 +213,10 @@ class PengangkutanResource extends Resource
                         ->when($data['sampai'] ?? null, fn (Builder $q, string $sampai) => $q->whereDate('tanggal', '<=', $sampai))),
             ])
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make(),
+                ]),
             ]);
     }
 

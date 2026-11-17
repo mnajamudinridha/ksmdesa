@@ -5,6 +5,7 @@ namespace App\Filament\Ksm\Resources\TarifLayanans;
 use App\Filament\Ksm\Resources\TarifLayanans\Pages\ManageTarifLayanans;
 use App\Models\TarifLayanan;
 use BackedEnum;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
@@ -69,8 +70,10 @@ class TarifLayananResource extends Resource
                     ->numeric(),
             ])
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make(),
+                ]),
             ]);
     }
 

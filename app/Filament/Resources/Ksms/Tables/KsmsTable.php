@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Ksms\Tables;
 
+use App\Enums\PeranPengguna;
 use App\Models\Ksm;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -13,7 +15,7 @@ class KsmsTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->withCount(['pelanggan', 'users']))
+            ->modifyQueryUsing(fn ($query) => $query->withCount(['pelanggan', 'users' => fn ($users) => $users->whereIn('peran', PeranPengguna::staf())]))
             ->defaultSort('nama')
             ->columns([
                 ImageColumn::make('logo')
@@ -45,7 +47,9 @@ class KsmsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->recordActions([
-                EditAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                ]),
             ]);
     }
 }

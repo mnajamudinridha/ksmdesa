@@ -6,6 +6,7 @@ use App\Filament\Ksm\Resources\PembayaranIurans\Pages\ManagePembayaranIurans;
 use App\Models\PembayaranIuran;
 use BackedEnum;
 use Closure;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
@@ -124,8 +125,10 @@ class PembayaranIuranResource extends Resource
                     ->options(fn (): array => self::opsiBulan()),
             ])
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make(),
+                ]),
             ]);
     }
 

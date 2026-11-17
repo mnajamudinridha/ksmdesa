@@ -2,21 +2,27 @@
 
 namespace App\Filament\Ksm\Resources\Pelanggans;
 
+use App\Enums\PeranPengguna;
 use App\Filament\AvatarProviders\InisialAvatar;
 use App\Filament\Ksm\Resources\Pelanggans\Pages\ManagePelanggans;
+use App\Filament\Shared\AvatarField;
+use App\Filament\Shared\PenggunaForm;
 use App\Filament\Shared\PilihanPengguna;
 use App\Models\Pelanggan;
 use App\Models\TarifLayanan;
+use App\Models\User;
 use App\Support\AkunWarga;
 use App\Support\NomorHp;
 use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -117,10 +123,20 @@ class PelangganResource extends Resource
                             ->inline(false)
                             ->helperText('Matikan bila berhenti berlangganan. Akun warganya tetap bisa login.'),
                     ]),
-                Section::make('Akun warga & petugas')
+                Section::make('Akun login warga')
+                    ->description(fn (?Pelanggan $record): ?string => self::keteranganBersama($record))
                     ->columnSpanFull()
                     ->columns(2)
                     ->schema([
+                        AvatarField::make('akun_avatar')
+                            // afterStateHydrated is a single slot: set the state and redo the
+                            // upload's own file hydration (formatStateUsing would skip it).
+                            ->afterStateHydrated(function (FileUpload $component, ?Pelanggan $record): void {
+                                $component->state(self::akunBisaDiubah($record) ? $record?->akunWarga?->avatar : null);
+                                $component->hydrateFiles();
+                            })
+                            ->visible(fn (?Pelanggan $record): bool => self::akunBisaDiubah($record))
+                            ->columnSpanFull(),
                         TextInput::make('no_hp_akun')
                             ->label('Nomor HP (login warga)')
                             ->tel()
@@ -133,6 +149,38 @@ class PelangganResource extends Resource
                             })
                             ->live(onBlur: true)
                             ->helperText(fn (Get $get, ?Pelanggan $record): string => self::keteranganAkun($get('no_hp_akun'), $record)),
+                        TextInput::make('akun_email')
+                            ->label('Email')
+                            ->email()
+                            ->maxLength(255)
+                            ->formatStateUsing(fn (?Pelanggan $record): ?string => $record?->akunWarga?->email)
+                            ->rule(fn (?Pelanggan $record): Closure => function (string $attribute, mixed $value, Closure $fail) use ($record): void {
+                                if (filled($value) && PenggunaForm::pemilikLain(Filament::getTenant(), 'email', mb_strtolower(trim((string) $value)), $record?->akunWarga) !== null) {
+                                    $fail('Email sudah dipakai pengguna lain di KSM ini.');
+                                }
+                            })
+                            ->helperText('Opsional.')
+                            ->visible(fn (?Pelanggan $record): bool => self::akunBisaDiubah($record)),
+                        TextInput::make('akun_sandi')
+                            ->label('Kata sandi')
+                            ->password()
+                            ->revealable()
+                            ->minLength(8)
+                            ->maxLength(255)
+                            ->autocomplete('new-password')
+                            ->helperText(fn (?Pelanggan $record): string => $record?->akunWarga
+                                ? 'Kosongkan bila tidak diganti.'
+                                : 'Kosongkan untuk memakai sandi default desa.')
+                            ->visible(fn (?Pelanggan $record): bool => self::akunBisaDiubah($record)),
+                        Toggle::make('akun_aktif')
+                            ->label('Akun bisa login')
+                            ->formatStateUsing(fn (?Pelanggan $record): bool => $record?->akunWarga?->aktif ?? true)
+                            ->helperText('Matikan untuk memblokir login akun ini; data pelanggan tetap.')
+                            ->visible(fn (?Pelanggan $record): bool => self::akunBisaDiubah($record)),
+                    ]),
+                Section::make('Petugas')
+                    ->columnSpanFull()
+                    ->schema([
                         Select::make('petugas_id')
                             ->label('Petugas pengangkut')
                             ->options(fn (?Pelanggan $record): array => PilihanPengguna::petugas($record?->petugas_id))
@@ -203,12 +251,45 @@ class PelangganResource extends Resource
         return 'Warga login dengan nomor ini dan sandi default desa (bisa diganti di Profil saya).';
     }
 
-    /** Admin: save the record and apply the typed login number through AkunWarga. */
+    /**
+     * The account fields (photo, email, password, login) edit the customer's own warga
+     * account. An account of a petugas/admin who is also a customer is theirs to manage in
+     * Pengguna — otherwise this form could give staff the village default password.
+     */
+    private static function akunBisaDiubah(?Pelanggan $record): bool
+    {
+        $akun = $record?->akunWarga;
+
+        return $akun === null || $akun->peran === PeranPengguna::Warga;
+    }
+
+    /** One person can own several customers (house + shop): say whose login this also is. */
+    private static function keteranganBersama(?Pelanggan $record): ?string
+    {
+        $akun = $record?->akunWarga;
+
+        if ($akun === null) {
+            return 'Setiap pelanggan otomatis punya akun warga untuk login.';
+        }
+
+        if (! self::akunBisaDiubah($record)) {
+            return "Akun ini milik {$akun->peran->getLabel()} {$akun->name}; foto, email, dan sandinya diubah di menu Pengguna.";
+        }
+
+        $lain = $akun->pelangganMilik()->whereKeyNot($record->getKey())->pluck('nama');
+
+        return $lain->isEmpty() ? null : 'Akun ini juga dipakai pelanggan: '.$lain->join(', ').'.';
+    }
+
+    /** Admin: save the record and apply the typed login number and account fields. */
     public static function simpan(Pelanggan $pelanggan, array $data): Pelanggan
     {
         $nomor = Arr::pull($data, 'no_hp_akun');
+        $akunData = Arr::only($data, self::KOLOM_AKUN);
+        $data = Arr::except($data, self::KOLOM_AKUN);
 
-        return DB::transaction(function () use ($pelanggan, $data, $nomor): Pelanggan {
+        return DB::transaction(function () use ($pelanggan, $data, $nomor, $akunData): Pelanggan {
+            $akunSebelum = $pelanggan->user_id;
             $pelanggan->fill($data);
 
             if ($pelanggan->exists) {
@@ -221,8 +302,45 @@ class PelangganResource extends Resource
 
             $pelanggan->save();
 
+            // The fields were filled from the account that was shown, so they only go back to
+            // that account — or, on create, to a brand-new one. Never to someone else's existing
+            // account the number now links to, nor to a new account that replaced the shown one
+            // (it would inherit the old person's email/photo), nor to staff.
+            $akun = $pelanggan->akunWarga;
+            $akunSama = $akun !== null && ($akunSebelum === null ? $akun->wasRecentlyCreated : $akun->getKey() === $akunSebelum);
+
+            if ($akunSama && $akun->peran === PeranPengguna::Warga && $akunData !== []) {
+                self::simpanAkun($akun, $akunData);
+            }
+
             return $pelanggan;
         });
+    }
+
+    /** @var list<string> */
+    private const KOLOM_AKUN = ['akun_avatar', 'akun_email', 'akun_sandi', 'akun_aktif'];
+
+    /** @param  array<string, mixed>  $akunData */
+    private static function simpanAkun(User $akun, array $akunData): void
+    {
+        if (array_key_exists('akun_avatar', $akunData)) {
+            $akun->avatar = $akunData['akun_avatar'];
+        }
+
+        if (array_key_exists('akun_email', $akunData)) {
+            $akun->email = filled($akunData['akun_email']) ? mb_strtolower(trim($akunData['akun_email'])) : null;
+        }
+
+        if (filled($akunData['akun_sandi'] ?? null)) {
+            // A password of their own: no longer follows the village default (User saving hook).
+            $akun->password = $akunData['akun_sandi'];
+        }
+
+        if (array_key_exists('akun_aktif', $akunData)) {
+            $akun->aktif = (bool) $akunData['akun_aktif'];
+        }
+
+        $akun->save();
     }
 
     public static function infolist(Schema $schema): Schema
@@ -321,16 +439,17 @@ class PelangganResource extends Resource
                     ->visible($admin),
             ])
             ->recordActions([
-                Action::make('bukaPeta')
-                    ->label('Peta')
-                    ->icon(Heroicon::OutlinedMapPin)
-                    ->color('gray')
-                    ->url(fn (Pelanggan $record): ?string => $record->mapsUrl(), shouldOpenInNewTab: true)
-                    ->visible(fn (Pelanggan $record): bool => $record->mapsUrl() !== null),
-                ViewAction::make()
-                    ->visible(fn (): bool => ! auth()->user()?->isAdminKsm()),
-                EditAction::make()
-                    ->using(fn (Pelanggan $record, array $data): Pelanggan => self::simpan($record, $data)),
+                ActionGroup::make([
+                    ViewAction::make()
+                        ->visible(fn (): bool => ! auth()->user()?->isAdminKsm()),
+                    EditAction::make()
+                        ->using(fn (Pelanggan $record, array $data): Pelanggan => self::simpan($record, $data)),
+                    Action::make('bukaPeta')
+                        ->label('Buka peta')
+                        ->icon(Heroicon::OutlinedMapPin)
+                        ->url(fn (Pelanggan $record): ?string => $record->mapsUrl(), shouldOpenInNewTab: true)
+                        ->visible(fn (Pelanggan $record): bool => $record->mapsUrl() !== null),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
