@@ -7,6 +7,7 @@ use App\Filament\Ksm\Pages\Auth\Login;
 use App\Filament\Ksm\Pages\Tenancy\EditProfilKsm;
 use App\Filament\Ksm\Resources\Pelanggans\Pages\ManagePelanggans;
 use App\Filament\Ksm\Resources\Users\Pages\ManageUsers;
+use App\Filament\Shared\ProfilSaya;
 use App\Models\Ksm;
 use App\Models\Pelanggan;
 use App\Models\User;
@@ -200,6 +201,39 @@ class AkunWargaTest extends TestCase
         $this->assertSame(PeranPengguna::Petugas, $akun->peran);
         $this->assertFalse($akun->pakai_sandi_default);
         $this->assertTrue(Hash::check('sandi-petugas-1', $akun->getAuthPassword()));
+    }
+
+    public function test_admin_and_petugas_may_not_pick_the_village_default_as_their_password(): void
+    {
+        $akun = $this->buatPelanggan(['nama' => 'Calon Admin', 'no_hp_akun' => '081200008888'])->akunWarga;
+
+        Livewire::test(ManageUsers::class)
+            ->callAction(TestAction::make('edit')->table($akun), data: ['peran' => PeranPengguna::Admin->value, 'password' => 'desa12345'])
+            ->assertHasFormErrors(['password']);
+
+        Livewire::test(ManageUsers::class)
+            ->callAction('create', data: ['name' => 'Petugas Baru', 'no_hp' => '081200009999', 'peran' => PeranPengguna::Petugas->value, 'password' => 'desa12345', 'aktif' => true])
+            ->assertHasFormErrors(['password']);
+
+        // A warga may: the default is meant for them.
+        Livewire::test(ManageUsers::class)
+            ->callAction('create', data: ['name' => 'Warga Baru', 'no_hp' => '081200009998', 'peran' => PeranPengguna::Warga->value, 'password' => 'desa12345', 'aktif' => true])
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(PeranPengguna::Warga, $akun->refresh()->peran);
+    }
+
+    public function test_petugas_cannot_change_their_own_password_to_the_village_default(): void
+    {
+        $petugas = User::factory()->for($this->ksm)->petugas()->create(['password' => 'lama12345']);
+        $this->actingAs($petugas);
+
+        Livewire::test(ProfilSaya::class)
+            ->fillForm(['password' => 'desa12345', 'passwordConfirmation' => 'desa12345', 'currentPassword' => 'lama12345'])
+            ->call('save')
+            ->assertHasFormErrors(['password']);
+
+        $this->assertTrue(Hash::check('lama12345', $petugas->refresh()->getAuthPassword()));
     }
 
     public function test_a_non_warga_account_never_keeps_or_follows_the_village_default(): void

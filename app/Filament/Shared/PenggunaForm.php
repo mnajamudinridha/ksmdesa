@@ -74,6 +74,11 @@ final class PenggunaForm
                 ->maxLength(255)
                 ->required(fn (string $operation, Get $get, ?User $record): bool => $operation === 'create'
                     || self::naikDariSandiDefault($record, $get('peran')))
+                ->rule(fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($ksm, $get): void {
+                    if (self::peran($get('peran')) !== PeranPengguna::Warga && $ksm()?->cocokSandiDefault((string) $value)) {
+                        $fail(self::PESAN_SANDI_DEFAULT);
+                    }
+                })
                 ->dehydrated(fn (?string $state): bool => filled($state))
                 ->helperText(fn (string $operation, Get $get, ?User $record): ?string => match (true) {
                     self::naikDariSandiDefault($record, $get('peran')) => 'Wajib: akun ini masih memakai sandi default desa, yang tidak boleh dipakai admin/petugas.',
@@ -96,12 +101,19 @@ final class PenggunaForm
         ];
     }
 
+    public const PESAN_SANDI_DEFAULT = 'Admin dan petugas tidak boleh memakai sandi default desa — semua warga mengetahuinya.';
+
     /** An account still on the village default being given a role other than warga. */
     private static function naikDariSandiDefault(?User $record, mixed $peran): bool
     {
-        $peran = $peran instanceof PeranPengguna ? $peran : PeranPengguna::tryFrom((string) $peran);
+        $peran = self::peran($peran);
 
         return (bool) $record?->pakai_sandi_default && $peran !== null && $peran !== PeranPengguna::Warga;
+    }
+
+    private static function peran(mixed $state): ?PeranPengguna
+    {
+        return $state instanceof PeranPengguna ? $state : PeranPengguna::tryFrom((string) $state);
     }
 
     private static function sudahDipakai(?Ksm $ksm, string $kolom, ?string $nilai, ?User $kecuali): bool

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared;
 
+use Closure;
 use Filament\Auth\Pages\EditProfile;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
@@ -44,7 +45,14 @@ class ProfilSaya extends EditProfile
                     ->visible(fn (): bool => filled($this->getUser()->getAttributeValue('email'))),
                 $this->getPasswordFormComponent()
                     ->label('Kata sandi baru')
-                    ->helperText('Kosongkan bila tidak diganti.'),
+                    ->helperText('Kosongkan bila tidak diganti.')
+                    ->rule(fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                        $user = $this->getUser();
+
+                        if (! $user->isWarga() && $user->ksm?->cocokSandiDefault((string) $value)) {
+                            $fail(PenggunaForm::PESAN_SANDI_DEFAULT);
+                        }
+                    }),
                 $this->getPasswordConfirmationFormComponent(),
                 // Base version also asks for it when the email changes; email is read-only here,
                 // so only a password change needs the current password.

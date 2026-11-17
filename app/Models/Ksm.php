@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -66,6 +67,12 @@ class Ksm extends Model implements HasName
         $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
 
         return "{$scheme}://{$this->slug}.".config('app.domain');
+    }
+
+    /** Is this the village default password? Every resident knows it, so admins/petugas may not use it. */
+    public function cocokSandiDefault(?string $sandi): bool
+    {
+        return filled($sandi) && filled($this->sandi_default_hash) && Hash::check($sandi, $this->sandi_default_hash);
     }
 
     public function logoUrl(): ?string
