@@ -45,7 +45,9 @@ KSM (Kelompok Swadaya Masyarakat) mengelola pengangkutan sampah desa yang dibaya
 ```
 ksm ─┬─ users (ksm_id, peran, no_hp unik per KSM, pakai_sandi_default, aktif, avatar)
      ├─ tarif_layanan
-     ├─ pelanggan (tarif, petugas_id→users, user_id→akun warga, alamat/RT/RW/patokan/koordinat)
+     ├─ wilayah (rt, rw?, dusun, jumlah_kk)  unik (ksm, rw, rt) — RW kosong dijaga validasi form
+     ├─ pelanggan (tarif, wilayah_id→wilayah, petugas_id→users, user_id→akun warga, alamat/patokan/koordinat;
+     │             rt/rw teks lama tidak dipakai lagi — dibiarkan agar migrasi aditif)
      │    └─ pembayaran_iuran (periode, nominal, dibayar_pada, petugas_id, setoran_id)  unik (pelanggan, periode)
      ├─ pengangkutan (petugas_id, tanggal)  unik (petugas, tanggal)
      │    └─ pengangkutan_rincian (pelanggan_id, status, perkiraan_kg)  unik (pengangkutan, pelanggan)
@@ -69,6 +71,11 @@ Pengguna tidak pernah dihapus (dinonaktifkan). FK ke `users` dari tabel yang iku
 | Bulan yang boleh dicatat petugas | `App\Support\BulanIuran::pilihan()` | 6 bulan ke belakang s.d. 2 ke depan, hanya yang belum tercatat; dipakai sebagai opsi CheckboxList (rule `in`). |
 | Status setor | `PembayaranIuran::statusSetor()`, `scopeBelumDisetor` | `petugas_id` null = langsung ke pengurus; terisi & `setoran_id` null = **belum disetor**; keduanya terisi = disetor. Lunas **tidak** bergantung pada setoran. |
 | Jendela koreksi petugas | `Pengangkutan::bisaDiubahPetugas`, `PembayaranIuranPolicy` | Pengangkutan: sampai akhir hari berikutnya. Pembayaran: sampai masuk setoran. |
+| Periode laporan | `App\Support\Periode::dariFilter()` | Tahun + bulan / "semua" (setahun), hari desa. Filter halaman **tidak divalidasi Filament** dan bisa diubah lewat URL → nilai aneh jatuh ke bulan berjalan, tidak pernah melempar. |
+| Tanggal kas iuran | `PembayaranIuran::scopeDiterimaAntara` | `COALESCE(dibayar_pada, periode)` — iuran impor tanpa tanggal masuk pada tanggal 1 bulan iurannya. Rekap Iuran & dasbor iuran tetap per `periode`. |
+| Cakupan per RT | `RingkasanPengangkutan::perWilayah()` | Baris tiap RT + "Tanpa RT" + "Pelanggan nonaktif"; cakupan = pelanggan **aktif saat ini** yang diangkut ≥1× ÷ aktif. Σ kg semua baris = `berat()` periode. |
+| Tabel laporan | `App\Support\Laporan\TabelLaporan` + `Laporan…` | Satu objek untuk layar (widget `TabelLaporanWidget`), Excel (`EksporXlsx`), dan cetak — angka tidak bisa berbeda. |
+| KSM aktif mencatat | `Ksm::scopeAktifMencatat`, `Ksm::HARI_AKTIF_MENCATAT` | Ada catatan baru (`created_at`) di `Ksm::RELASI_CATATAN` dalam 7 hari. Dipakai stat, badge, dan filter panel master. |
 
 ## 5. Peran & akses
 
@@ -92,6 +99,12 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
   `petugas_id` pembayaran, `setoran_id`, `is_super_admin`) **tidak fillable** — isi lewat relasi/`forceFill`.
 - Resource **satu file** + folder `Pages/` (bukan `Schemas/`/`Tables/` hasil generator). Aksi baris di
   **`ActionGroup`** (menu titik tiga). Halaman pengaturan dibagi **`Section`**.
+- **Dasbor & laporan:** dasbor desa = `App\Filament\Ksm\Pages\Dashboard` dengan **daftar widget eksplisit** (bawaan
+  memuat semua widget panel). Halaman analitik/laporan = turunan `Filament\Pages\Dashboard` (`HalamanAnalitik` /
+  `HalamanLaporan`, trait `PunyaFilterPeriode`), `$routePath` dan `$slug` sama (`'laporan/operasional'`). Bagian laporan =
+  pembangun di `App\Support\Laporan\` + widget turunan `TabelLaporanWidget` (data kustom `records()`, tidak lazy).
+  Excel = `EksporXlsx::unduh()` (OpenSpout, `StreamedResponse` dari aksi Livewire); cetak = `window.print()` + aturan
+  `@media print` di `resources/views/filament/laporan/kop.blade.php`.
 - Query resource per peran di `getEloquentQuery()` (admin semua / petugas miliknya / lainnya `whereRaw('1 = 0')`) **plus** policy.
 - Select/CheckboxList: opsi = himpunan yang sah → rule `in` bawaan Filament menolak nilai lain di server.
   Sertakan nilai tersimpan di opsi (mis. `PilihanPengguna::petugas($tersimpan)`) agar simpan tanpa perubahan tidak gagal.
@@ -130,6 +143,12 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
 | Simpan ulang menolak berkas yang sudah tersimpan ("path berkas yang tidak diizinkan") | `preventFilePathTampering()` mencocokkan path dengan model form | form halaman kustom wajib `->model($record)` |
 | Pratinjau unggahan macet "Memuat / Menunggu ukuran berkas" di subdomain (di master normal) | URL disk `public` absolut ke apex → FilePond mengambil berkas lintas-origin, server tanpa header CORS | `filesystems.disks.public.url = '/storage'` (relatif host; semua subdomain melayani `public/storage` yang sama) |
 | SelectFilter `->relationship()` | opsi dimuat dari seluruh tabel relasi (bergantung pada scope tenant implisit) | opsi eksplisit `whereBelongsTo(Filament::getTenant())` |
+| Uji sabotase "hapus `whereBelongsTo`" tetap hijau | scope tenant Filament ikut menyaring selama panel `ksm` aktif | uji lapisan eksplisit dengan `Filament::setCurrentPanel('admin')` (scope hanya berjalan di panelnya) |
+| Data tabel kustom (`records()`) bocor antar-KSM | array tidak kena scope global maupun kebijakan | pembangun memfilter `whereBelongsTo($ksm)` sendiri |
+| Cetak laporan kosong / teks tak terbaca | widget lazy belum dimuat; mode gelap mencetak teks terang tanpa latar | `TabelLaporanWidget::$isLazy = false`; `@media print` paksa warna gelap di latar putih, A4 lanskap |
+| `assertSeeInOrder(['Label', '2'])` pada kartu Stat lolos padahal salah | "2" ada di mana saja di HTML | baca nilai kartu dengan trait `Tests\Concerns\BacaNilaiStat` |
+| Widget dasbor tak muncul di respons HTTP tes | widget Filament lazy (placeholder) | `assertSeeLivewire(Widget::class)` |
+| Nama `=HYPERLINK(…)` jadi rumus aktif di Excel | OpenSpout `Cell::fromValue()` membuat sel rumus untuk teks berawalan `=`; petugas bisa mengganti namanya sendiri | semua teks ditulis sebagai `StringCell` (`EksporXlsx::sel`); tes memeriksa XML lembar tanpa `<f>` (pembaca OpenSpout mengembalikan teks rumus apa adanya) |
 
 ## 9. Deploy & operasi
 
@@ -151,8 +170,8 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
 | 3 | Pengangkutan harian per rumah, dasbor per peran | §5 dokumen yang sama |
 | — | Warga hanya dari Pelanggan; Pengguna = admin & petugas; ActionGroup; Section; branding (logo + nama, latar login) | catatan di dokumen yang sama |
 | 4 | Petugas catat iuran, setoran ke pengurus; logo & latar login panel master | [plans/2026-11-17-fase-4-petugas-catat-iuran.md](plans/2026-11-17-fase-4-petugas-catat-iuran.md) |
+| 5A | Master RT/RW, dasbor eksplisit + Kelengkapan data, Analitik & Laporan Operasional (Excel, cetak), Excel Rekap Iuran, widget panel master | [plans/2026-11-17-fase-5-dasbor-dan-laporan.md](plans/2026-11-17-fase-5-dasbor-dan-laporan.md) §5 |
 
 **Menunggu keputusan pemilik:** kebijakan `StatusIuran::tentukan()` (kurang/lebih/nonaktif), setelan email (`MAIL_MAILER=log`).
-**Berikutnya:** Fase 5 — widget dasbor master & desa + halaman laporan mengikuti mockup
-"KSM Circular Economy Dashboard"; rencana disetujui (5A → 5B → 5C):
-[plans/2026-11-17-fase-5-dasbor-dan-laporan.md](plans/2026-11-17-fase-5-dasbor-dan-laporan.md).
+**Berikutnya:** Fase 5B (buku kas, mitra, keuangan) lalu 5C (material, lingkungan, kemitraan, kinerja) —
+rencana disetujui: [plans/2026-11-17-fase-5-dasbor-dan-laporan.md](plans/2026-11-17-fase-5-dasbor-dan-laporan.md).

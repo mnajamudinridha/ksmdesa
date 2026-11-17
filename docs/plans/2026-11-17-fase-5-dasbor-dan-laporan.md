@@ -1,6 +1,12 @@
 # Blueprint Fase 5: Dasbor analitik & laporan (mockup "KSM Circular Economy Dashboard")
 
-Status: **DISETUJUI (2026-11-17)** — dikerjakan bertahap 5A → 5B → 5C. Lanjutan dari Fase 1–3
+Status: **DISETUJUI (2026-11-17). Fase 5A DIIMPLEMENTASIKAN; 5B dan 5C menyusul.** Catatan implementasi 5A:
+migrasi wilayah **aditif** (kolom `rt`/`rw` lama dibiarkan, tidak dihapus); `HalamanLaporan` memakai `abstract tabelLaporan(Periode): list<TabelLaporan>` (bukan `pembangun()`); `rtTerlayani()` menerima
+baris `perWilayah()` (tidak menghitung ulang); aturan cetak = A4 **lanskap**, warna dipaksa gelap-di-putih (mode gelap),
+judul layar disembunyikan (kop sudah memuatnya); `TabelLaporanWidget::$isLazy = false` agar cetak tidak menangkap tabel yang
+masih memuat; lapisan filter KSM eksplisit diuji dengan berpindah ke panel master (scope tenant Filament hanya berjalan di
+panel `ksm`); nilai kartu Stat diuji lewat `Tests\Concerns\BacaNilaiStat`. Audit keamanan (skill `filament-security-audit`): 1 temuan —
+injeksi rumus Excel (teks berawalan `=` ditulis OpenSpout sebagai rumus) — diperbaiki dengan sel teks eksplisit. 20 uji sabotase merah sesuai harapan. Lanjutan dari Fase 1–3
 (`2026-11-17-peran-pengguna-dan-pengangkutan.md`) dan Fase 4 (`2026-11-17-fase-4-petugas-catat-iuran.md`);
 semua aturan kanonik di sana (`App\Support\Hari`, `NomorHp`, tenancy satu-DB, `diKsmLain`, uji sabotase,
 `StatusIuran`, status setor) tetap berlaku. Disusun dengan skill `planning-filament` (Filament Blueprint v2.4).
