@@ -223,6 +223,23 @@ class AkunWargaTest extends TestCase
         $this->assertSame(PeranPengguna::Warga, $akun->refresh()->peran);
     }
 
+    public function test_a_warga_given_the_default_by_hand_still_needs_a_new_password_when_promoted(): void
+    {
+        Livewire::test(ManageUsers::class)
+            ->callAction('create', data: ['name' => 'Diberi Default', 'no_hp' => '081200007878', 'peran' => PeranPengguna::Warga->value, 'password' => 'desa12345', 'aktif' => true])
+            ->assertHasNoFormErrors();
+        $warga = User::query()->where('no_hp', '081200007878')->sole();
+        $this->assertFalse($warga->pakai_sandi_default);
+
+        Livewire::test(ManageUsers::class)
+            ->callAction(TestAction::make('edit')->table($warga), data: ['peran' => PeranPengguna::Petugas->value])
+            ->assertHasFormErrors(['password' => 'required']);
+
+        // Outside the form (seeder, tinker) the promotion fails closed instead.
+        $warga->update(['peran' => PeranPengguna::Petugas]);
+        $this->assertFalse(Hash::check('desa12345', $warga->refresh()->getAuthPassword()));
+    }
+
     public function test_petugas_cannot_change_their_own_password_to_the_village_default(): void
     {
         $petugas = User::factory()->for($this->ksm)->petugas()->create(['password' => 'lama12345']);

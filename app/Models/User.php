@@ -57,14 +57,21 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasDefaul
                 $user->pakai_sandi_default = false;
             }
 
-            // The village default is known to every resident, so only warga may use it. An
-            // account promoted while still on it gets an unknown password (fail closed); the
-            // Pengguna form makes the admin set a real one in the same save.
-            if ($user->pakai_sandi_default && $user->peran !== PeranPengguna::Warga) {
-                if (! $user->isDirty('password')) {
-                    $user->password = Str::password(40);
-                }
+            // The village default is known to every resident, so only warga may use it. A warga
+            // may be on it even without the flag (typed in by hand), and a hash can't be compared
+            // with the default's hash — so ANY promotion out of warga needs a new password. Saved
+            // without one, the account gets an unknown password (fail closed); the Pengguna form
+            // makes the admin set a real one in the same save.
+            $naikDariWarga = $user->exists
+                && $user->isDirty('peran')
+                && $user->getOriginal('peran') === PeranPengguna::Warga
+                && $user->peran !== PeranPengguna::Warga;
 
+            if (($naikDariWarga || $user->pakai_sandi_default) && $user->peran !== PeranPengguna::Warga && ! $user->isDirty('password')) {
+                $user->password = Str::password(40);
+            }
+
+            if ($user->peran !== PeranPengguna::Warga) {
                 $user->pakai_sandi_default = false;
             }
         });

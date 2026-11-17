@@ -73,7 +73,7 @@ final class PenggunaForm
                 ->minLength(8)
                 ->maxLength(255)
                 ->required(fn (string $operation, Get $get, ?User $record): bool => $operation === 'create'
-                    || self::naikDariSandiDefault($record, $get('peran')))
+                    || self::naikDariWarga($record, $get('peran')))
                 ->rule(fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($ksm, $get): void {
                     if (self::peran($get('peran')) !== PeranPengguna::Warga && $ksm()?->cocokSandiDefault((string) $value)) {
                         $fail(self::PESAN_SANDI_DEFAULT);
@@ -81,7 +81,7 @@ final class PenggunaForm
                 })
                 ->dehydrated(fn (?string $state): bool => filled($state))
                 ->helperText(fn (string $operation, Get $get, ?User $record): ?string => match (true) {
-                    self::naikDariSandiDefault($record, $get('peran')) => 'Wajib: akun ini masih memakai sandi default desa, yang tidak boleh dipakai admin/petugas.',
+                    self::naikDariWarga($record, $get('peran')) => 'Wajib: akun warga yang dinaikkan perannya harus diberi sandi baru (bukan sandi default desa).',
                     $operation === 'edit' => 'Kosongkan bila tidak diganti.',
                     default => null,
                 }),
@@ -103,12 +103,16 @@ final class PenggunaForm
 
     public const PESAN_SANDI_DEFAULT = 'Admin dan petugas tidak boleh memakai sandi default desa — semua warga mengetahuinya.';
 
-    /** An account still on the village default being given a role other than warga. */
-    private static function naikDariSandiDefault(?User $record, mixed $peran): bool
+    /**
+     * A warga account being given another role. Its password may be the village default even
+     * without the flag (typed in by hand), and that can't be detected from the hash — so every
+     * promotion needs a new password, which the rule above checks against the default.
+     */
+    private static function naikDariWarga(?User $record, mixed $peran): bool
     {
         $peran = self::peran($peran);
 
-        return (bool) $record?->pakai_sandi_default && $peran !== null && $peran !== PeranPengguna::Warga;
+        return $record?->peran === PeranPengguna::Warga && $peran !== null && $peran !== PeranPengguna::Warga;
     }
 
     private static function peran(mixed $state): ?PeranPengguna
