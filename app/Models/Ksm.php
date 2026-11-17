@@ -155,12 +155,24 @@ class Ksm extends Model implements HasAvatar, HasName
         return $this->hasMany(TransaksiKas::class);
     }
 
+    /** @return HasMany<JenisMaterial, $this> */
+    public function jenisMaterial(): HasMany
+    {
+        return $this->hasMany(JenisMaterial::class);
+    }
+
+    /** @return HasMany<CatatanMaterial, $this> */
+    public function catatanMaterial(): HasMany
+    {
+        return $this->hasMany(CatatanMaterial::class);
+    }
+
     /**
      * Relations whose new rows show that a KSM is using the app ("aktif mencatat").
      *
      * @var list<string>
      */
-    public const RELASI_CATATAN = ['pengangkutan', 'pembayaranIuran', 'setoran', 'transaksiKas'];
+    public const RELASI_CATATAN = ['pengangkutan', 'pembayaranIuran', 'setoran', 'transaksiKas', 'catatanMaterial'];
 
     /** A KSM counts as "aktif mencatat" when it recorded something within this many days. */
     public const int HARI_AKTIF_MENCATAT = 7;
@@ -170,7 +182,7 @@ class Ksm extends Model implements HasAvatar, HasName
         return now()->subDays(self::HARI_AKTIF_MENCATAT);
     }
 
-    /** KSMs that recorded anything (rounds, fees, deposits, cash entries) since $sejak — an instant, compared with created_at. */
+    /** KSMs that recorded anything (rounds, fees, deposits, cash entries, material records) since $sejak — an instant, compared with created_at. */
     public function scopeAktifMencatat(Builder $query, CarbonInterface $sejak): Builder
     {
         return $query->where(function (Builder $ada) use ($sejak): void {

@@ -37,6 +37,7 @@ final class LaporanKeuangan
             new KolomLaporan('bulan', 'Bulan'),
             new KolomLaporan('saldo_awal', 'Saldo awal', FormatAngka::Rupiah),
             new KolomLaporan('iuran', 'Iuran', FormatAngka::Rupiah),
+            new KolomLaporan('material', 'Penjualan material', FormatAngka::Rupiah),
             new KolomLaporan('masuk_lain', 'Pemasukan lain', FormatAngka::Rupiah),
             new KolomLaporan('keluar', 'Pengeluaran', FormatAngka::Rupiah),
             new KolomLaporan('surplus', 'Surplus/defisit', FormatAngka::Rupiah),
@@ -58,10 +59,10 @@ final class LaporanKeuangan
             total: [
                 'bulan' => 'Jumlah',
                 'saldo_awal' => $baris[0]['saldo_awal'] ?? null,
-                ...self::jumlahkan($baris, ['iuran', 'masuk_lain', 'keluar', 'surplus']),
+                ...self::jumlahkan($baris, ['iuran', 'material', 'masuk_lain', 'keluar', 'surplus']),
                 'saldo_akhir' => $baris === [] ? null : $baris[array_key_last($baris)]['saldo_akhir'],
             ],
-            catatan: 'Iuran dihitung pada tanggal diterima (iuran hasil impor tanpa tanggal: tanggal 1 bulan iurannya); rinciannya ada di menu Pembayaran Iuran. Saldo "—" = sebelum tanggal mulai pembukuan (Profil KSM).',
+            catatan: 'Iuran dihitung pada tanggal diterima (iuran hasil impor tanpa tanggal: tanggal 1 bulan iurannya); rinciannya ada di menu Pembayaran Iuran. Penjualan material berasal dari Catatan Material. Saldo "—" = sebelum tanggal mulai pembukuan (Profil KSM).',
         );
     }
 
@@ -85,7 +86,7 @@ final class LaporanKeuangan
             kolom: self::kolomPemasukan(),
             baris: $baris,
             total: ['sumber' => 'Jumlah', ...self::jumlahkan($baris, ['jumlah', 'nominal']), 'porsi' => $baris === [] ? null : 1.0],
-            catatan: 'Transaksi iuran = jumlah pembayaran iuran yang diterima pada periode ini.',
+            catatan: 'Transaksi iuran = jumlah pembayaran iuran yang diterima pada periode ini; penjualan material = jumlah catatan jual.',
         );
     }
 

@@ -13,7 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A partner of the KSM (government, company/CSR, buyer, community…). Income from a partner
- * is a cash-book entry that names it; that sum is the partner's support.
+ * is a cash-book entry that names it; that sum is the partner's support. A buyer (pengepul)
+ * is named on material sales.
  */
 #[Table('mitra')]
 #[Fillable(['nama', 'jenis', 'kontak', 'no_hp', 'alamat', 'keterangan', 'aktif'])]
@@ -42,9 +43,19 @@ class Mitra extends Model
         return $this->hasMany(TransaksiKas::class);
     }
 
-    /** A partner named on any transaction stays — deactivate it instead. */
+    /**
+     * Material sales to this partner (as buyer, "pengepul").
+     *
+     * @return HasMany<CatatanMaterial, $this>
+     */
+    public function catatanMaterial(): HasMany
+    {
+        return $this->hasMany(CatatanMaterial::class);
+    }
+
+    /** A partner named on any cash entry or material sale stays — deactivate it instead. */
     public function dipakai(): bool
     {
-        return $this->transaksiKas()->exists();
+        return $this->transaksiKas()->exists() || $this->catatanMaterial()->exists();
     }
 }

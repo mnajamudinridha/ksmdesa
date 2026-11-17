@@ -2,7 +2,9 @@
 
 namespace App\Filament\Shared;
 
+use App\Enums\JenisMitra;
 use App\Enums\JenisTransaksi;
+use App\Models\JenisMaterial;
 use App\Models\KategoriTransaksi;
 use App\Models\Mitra;
 use App\Models\Wilayah;
@@ -64,6 +66,64 @@ final class PilihanMaster
             ->orderBy('nama')
             ->get()
             ->mapWithKeys(fn (KategoriTransaksi $kategori): array => [$kategori->getKey() => "{$kategori->nama} ({$kategori->jenis->getLabel()})"])
+            ->all();
+    }
+
+    /** @return array<int, string> active material kinds, plus the saved one */
+    public static function jenisMaterial(?int $tersimpan = null): array
+    {
+        return JenisMaterial::query()
+            ->whereBelongsTo(Filament::getTenant())
+            ->where(fn (Builder $query) => $query->where('aktif', true)->when($tersimpan, fn (Builder $q) => $q->orWhereKey($tersimpan)))
+            ->orderBy('nama')
+            ->get()
+            ->mapWithKeys(fn (JenisMaterial $jenis): array => [$jenis->getKey() => $jenis->nama.($jenis->aktif ? '' : ' (nonaktif)')])
+            ->all();
+    }
+
+    /** @return array<int, string> every material kind of the KSM, also inactive — for filtering lists */
+    public static function semuaJenisMaterial(): array
+    {
+        return JenisMaterial::query()
+            ->whereBelongsTo(Filament::getTenant())
+            ->orderBy('nama')
+            ->pluck('nama', 'id')
+            ->all();
+    }
+
+    /**
+     * Buyers for a sale: active partners of kind "pengepul", plus the saved one (it may have been
+     * deactivated or changed kind since).
+     *
+     * @return array<int, string>
+     */
+    public static function pengepul(?int $tersimpan = null): array
+    {
+        return Mitra::query()
+            ->whereBelongsTo(Filament::getTenant())
+            ->where(fn (Builder $query) => $query
+                ->where(fn (Builder $aktif) => $aktif->where('jenis', JenisMitra::Pengepul)->where('aktif', true))
+                ->when($tersimpan, fn (Builder $q) => $q->orWhereKey($tersimpan)))
+            ->orderBy('nama')
+            ->get()
+            ->mapWithKeys(fn (Mitra $mitra): array => [$mitra->getKey() => $mitra->nama.($mitra->aktif ? '' : ' (nonaktif)')])
+            ->all();
+    }
+
+    /**
+     * Every buyer of the KSM for filtering lists: partners of kind "pengepul" (also inactive) and
+     * any partner that ever bought material (it may have changed kind since).
+     *
+     * @return array<int, string>
+     */
+    public static function semuaPengepul(): array
+    {
+        return Mitra::query()
+            ->whereBelongsTo(Filament::getTenant())
+            ->where(fn (Builder $query) => $query->where('jenis', JenisMitra::Pengepul)->orWhereHas('catatanMaterial'))
+            ->orderBy('nama')
+            ->get()
+            ->mapWithKeys(fn (Mitra $mitra): array => [$mitra->getKey() => $mitra->nama.($mitra->aktif ? '' : ' (nonaktif)')])
             ->all();
     }
 

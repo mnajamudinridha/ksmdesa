@@ -2,9 +2,11 @@
 
 namespace App\Filament\Ksm\Resources\TransaksiKas;
 
+use App\Enums\JenisMitra;
 use App\Enums\JenisTransaksi;
 use App\Filament\Ksm\Resources\TransaksiKas\Pages\ManageTransaksiKas;
 use App\Filament\Shared\PilihanMaster;
+use App\Models\Mitra;
 use App\Models\TransaksiKas;
 use App\Support\Hari;
 use App\Support\RingkasanIuran;
@@ -110,6 +112,8 @@ class TransaksiKasResource extends Resource
                     ->label('Dari mitra (opsional)')
                     ->options(fn (?TransaksiKas $record): array => PilihanMaster::mitra($record?->mitra_id))
                     ->searchable()
+                    ->live()
+                    ->helperText(fn (Get $get): ?string => self::peringatanPengepul($get('mitra_id')))
                     // Hidden for spending: not validated or saved; the model also clears it (second layer).
                     ->visible(fn (Get $get): bool => JenisTransaksi::dari($get('jenis'))?->bolehMitra() ?? false),
                 TextInput::make('uraian')
@@ -132,6 +136,21 @@ class TransaksiKasResource extends Resource
                     ->preventFilePathTampering()
                     ->columnSpanFull(),
             ]);
+    }
+
+    /**
+     * A sale to a buyer is already cash income from Catatan Material: entering it here as well
+     * would count it twice. Warn when the chosen partner (of this KSM) is a buyer.
+     */
+    public static function peringatanPengepul(mixed $mitraId): ?string
+    {
+        $pengepul = filled($mitraId) && is_scalar($mitraId) && Mitra::query()
+            ->whereBelongsTo(Filament::getTenant())
+            ->whereKey($mitraId)
+            ->where('jenis', JenisMitra::Pengepul)
+            ->exists();
+
+        return $pengepul ? 'Mitra ini pengepul. Penjualan material sudah masuk kas dari Catatan Material — jangan dicatat lagi di sini.' : null;
     }
 
     public static function table(Table $table): Table

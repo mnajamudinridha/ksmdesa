@@ -52,7 +52,8 @@ class RingkasanPerKsmTable extends TableWidget
                 ->withMax('pengangkutan', 'created_at')
                 ->withMax('pembayaranIuran', 'created_at')
                 ->withMax('setoran', 'created_at')
-                ->withMax('transaksiKas', 'created_at'))
+                ->withMax('transaksiKas', 'created_at')
+                ->withMax('catatanMaterial', 'created_at'))
             ->defaultSort('nama')
             ->paginated(false)
             ->columns([
@@ -85,6 +86,7 @@ class RingkasanPerKsmTable extends TableWidget
                         $record->pembayaran_iuran_max_created_at,
                         $record->setoran_max_created_at,
                         $record->transaksi_kas_max_created_at,
+                        $record->catatan_material_max_created_at,
                     ])->filter()->max())
                     ->dateTime('d M Y H:i', timezone: (string) config('app.zona_waktu_lokal'))
                     ->placeholder('belum pernah'),

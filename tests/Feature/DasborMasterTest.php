@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Filament\Widgets\IuranSemuaKsmChart;
 use App\Filament\Widgets\RingkasanMasterStats;
 use App\Filament\Widgets\RingkasanPerKsmTable;
+use App\Models\CatatanMaterial;
 use App\Models\Ksm;
 use App\Models\Pelanggan;
 use App\Models\PembayaranIuran;
@@ -88,6 +89,15 @@ class DasborMasterTest extends TestCase
     {
         $transaksi = TransaksiKas::factory()->for($this->c)->create();
         $transaksi->forceFill(['created_at' => now()->subDays(2)])->save();
+
+        Livewire::test(RingkasanPerKsmTable::class)
+            ->assertTableColumnStateSet('status', 'Aktif mencatat', $this->c);
+    }
+
+    public function test_a_material_record_counts_as_recording(): void
+    {
+        $catatan = CatatanMaterial::factory()->for($this->c)->create();
+        $catatan->forceFill(['created_at' => now()->subDay()])->save();
 
         Livewire::test(RingkasanPerKsmTable::class)
             ->assertTableColumnStateSet('status', 'Aktif mencatat', $this->c);

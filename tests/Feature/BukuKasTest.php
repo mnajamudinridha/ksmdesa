@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\JenisMitra;
 use App\Enums\JenisTransaksi;
 use App\Filament\Ksm\Pages\Tenancy\EditProfilKsm;
 use App\Filament\Ksm\Resources\KategoriTransaksis\Pages\ManageKategoriTransaksis;
 use App\Filament\Ksm\Resources\TransaksiKas\Pages\ManageTransaksiKas;
+use App\Filament\Ksm\Resources\TransaksiKas\TransaksiKasResource;
 use App\Filament\Ksm\Widgets\KelengkapanDataStats;
 use App\Filament\Shared\PilihanMaster;
 use App\Models\KategoriTransaksi;
@@ -141,6 +143,22 @@ class BukuKasTest extends TestCase
             ->assertHasNoFormErrors();
 
         $this->assertSame([$this->bbm->id, 'Diperbaiki'], [$transaksi->refresh()->kategori_transaksi_id, $transaksi->uraian]);
+    }
+
+    public function test_income_from_a_buyer_warns_that_material_sales_are_already_counted(): void
+    {
+        $pengepul = Mitra::factory()->for($this->ksm)->create(['jenis' => JenisMitra::Pengepul]);
+        $swasta = Mitra::factory()->for($this->ksm)->create();
+        $pengepulLain = $this->diKsmLain(fn () => Mitra::factory()->for(Ksm::factory())->create(['jenis' => JenisMitra::Pengepul]));
+
+        $this->assertStringContainsString('Penjualan material sudah masuk kas dari Catatan Material', (string) TransaksiKasResource::peringatanPengepul($pengepul->id));
+        $this->assertNull(TransaksiKasResource::peringatanPengepul($swasta->id));
+        $this->assertNull(TransaksiKasResource::peringatanPengepul($pengepulLain->id));
+        $this->assertNull(TransaksiKasResource::peringatanPengepul(null));
+
+        // The explicit KSM filter holds on its own: Filament's tenant scope only runs in the ksm panel.
+        Filament::setCurrentPanel('admin');
+        $this->assertNull(TransaksiKasResource::peringatanPengepul($pengepulLain->id));
     }
 
     public function test_only_income_keeps_a_partner(): void

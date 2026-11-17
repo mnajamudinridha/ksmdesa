@@ -14,7 +14,7 @@ use Illuminate\Support\Collection;
  * The KSM's cash: one place for every figure of the cash book.
  *
  * - Income = fees by the day the cash came in (imported fees without that date: the first of
- *   their month) + manual income entries (+ material sales, phase 5C).
+ *   their month) + material sales (from the material log) + manual income entries.
  * - Spending = manual spending entries.
  * - Balance on a day = opening balance + income − spending from the start date (kas_mulai) up
  *   to that day; none before the start date. Flows are always reported, balances can be "—".
@@ -38,10 +38,13 @@ final class RingkasanKas
         return (int) $this->transaksi(JenisTransaksi::Masuk, $dari, $sampai)->sum('nominal');
     }
 
-    /** Material sales (phase 5C); nothing yet. */
+    /**
+     * Material sold in the period, read from the material log on the sale's date — never a
+     * cash-book entry, so editing or deleting the sale changes the cash at once.
+     */
     public function penjualanMaterial(string $dari, string $sampai): int
     {
-        return 0;
+        return (new RingkasanMaterial($this->ksm))->terjual($dari, $sampai)['nilai'];
     }
 
     public function masuk(string $dari, string $sampai): int
@@ -85,7 +88,7 @@ final class RingkasanKas
     }
 
     /**
-     * Income per source: fees first, then each income category, "Tanpa kategori" last.
+     * Income per source: fees, material sales, then each income category, "Tanpa kategori" last.
      *
      * @return list<array{sumber: string, jumlah: int, nominal: int}>
      */
@@ -96,6 +99,9 @@ final class RingkasanKas
             'jumlah' => $this->pembayaran($dari, $sampai)->count(),
             'nominal' => $this->iuran($dari, $sampai),
         ]];
+
+        $penjualan = (new RingkasanMaterial($this->ksm))->terjual($dari, $sampai);
+        $baris[] = ['sumber' => 'Penjualan material', 'jumlah' => $penjualan['jumlah'], 'nominal' => $penjualan['nilai']];
 
         foreach ($this->perKategori(JenisTransaksi::Masuk, $dari, $sampai) as $kategori) {
             $baris[] = ['sumber' => $kategori['kategori'], 'jumlah' => $kategori['jumlah'], 'nominal' => $kategori['nominal']];

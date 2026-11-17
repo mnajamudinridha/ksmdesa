@@ -172,7 +172,7 @@ class RingkasanKasTest extends TestCase
         $isi = $this->bacaUnduhanXlsx($komponen);
         $this->assertSame(['Arus kas bulanan', 'Pemasukan per sumber', 'Pengeluaran per kategori', 'Rincian transaksi kas'], array_keys($isi));
         $november = $this->barisBerlabel($isi['Arus kas bulanan'], 'November 2026');
-        $this->assertSame([90_000, 1_140_000], [$november[2], $november[6]]);
+        $this->assertSame([90_000, 0, 1_140_000], [$november[2], $november[3], $november[7]]);
         $this->assertContains('=1+1', array_column($isi['Rincian transaksi kas'], 3));
         foreach ($this->xmlLembarXlsx($komponen) as $lembar => $xml) {
             $this->assertStringNotContainsString('<f>', $xml, "{$lembar} berisi rumus");
