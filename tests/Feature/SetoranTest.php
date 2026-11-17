@@ -158,8 +158,11 @@ class SetoranTest extends TestCase
         $lain = $this->diKsmLain(fn () => Setoran::factory()->create());
         $milik = Setoran::factory()->for($this->ksm)->create(['petugas_id' => $this->petugasA->id]);
 
-        Livewire::test(ListSetorans::class)
+        $daftar = Livewire::test(ListSetorans::class)
             ->assertCanSeeTableRecords([$milik])
             ->assertCanNotSeeTableRecords([$lain]);
+
+        // The petugas filter names only this KSM's people.
+        $this->assertSame([$this->petugasA->id], array_keys($daftar->instance()->getTable()->getFilter('petugas_id')->getOptions()));
     }
 }

@@ -161,7 +161,14 @@ class SetoranResource extends Resource
             ->filters([
                 SelectFilter::make('petugas_id')
                     ->label('Petugas')
-                    ->relationship('petugas', 'name'),
+                    // Explicitly this KSM's people with a deposit — a relationship() option list would
+                    // query the users table and lean on the panel's implicit tenant scope.
+                    ->options(fn (): array => User::query()
+                        ->whereBelongsTo(Filament::getTenant())
+                        ->whereIn('id', Setoran::query()->whereBelongsTo(Filament::getTenant())->select('petugas_id'))
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all()),
                 Filter::make('tanggal')
                     ->schema([
                         DatePicker::make('dari')->native(false),

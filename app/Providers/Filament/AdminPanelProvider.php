@@ -4,6 +4,9 @@ namespace App\Providers\Filament;
 
 use App\Filament\AvatarProviders\InisialAvatar;
 use App\Filament\Shared\ProfilSaya;
+use App\Filament\Shared\TampilanPanel;
+use App\Models\PengaturanMaster;
+use Filament\Auth\Pages\Login;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -12,8 +15,10 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -35,6 +40,9 @@ class AdminPanelProvider extends PanelProvider
             // Initials drawn locally: the default provider would send names to ui-avatars.com.
             ->defaultAvatarProvider(InisialAvatar::class)
             ->brandName('KSM Desa — Master')
+            ->brandLogo(fn (): string|Htmlable|null => TampilanPanel::logo(PengaturanMaster::sekarang()->logoUrl(), 'KSM Desa — Master'))
+            ->brandLogoHeight(fn (): string => TampilanPanel::tinggiLogo())
+            ->renderHook(PanelsRenderHook::HEAD_END, fn (): string => TampilanPanel::gayaLatarLogin(PengaturanMaster::sekarang()->latarLoginUrl()), scopes: Login::class)
             ->colors([
                 'primary' => Color::Green,
             ])

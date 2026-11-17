@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
@@ -10,6 +11,9 @@ use Tests\TestCase;
  */
 class DomainRoutingTest extends TestCase
 {
+    // The master login page reads its look (logo, backgrounds) from the database.
+    use RefreshDatabase;
+
     public function test_admin_login_is_served_on_the_master_domain(): void
     {
         $this->get('http://ksmdesa.test/admin/login')->assertOk();

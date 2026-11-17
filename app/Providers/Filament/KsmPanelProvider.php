@@ -6,6 +6,7 @@ use App\Filament\AvatarProviders\InisialAvatar;
 use App\Filament\Ksm\Pages\Auth\Login;
 use App\Filament\Ksm\Pages\Tenancy\EditProfilKsm;
 use App\Filament\Shared\ProfilSaya;
+use App\Filament\Shared\TampilanPanel;
 use App\Http\Middleware\EnsureKsmSubdomain;
 use App\Models\Ksm;
 use App\Support\KsmDariHost;
@@ -57,11 +58,11 @@ class KsmPanelProvider extends PanelProvider
             // Village users belong to one KSM: never offer the others.
             ->tenantMenu(fn (): bool => (bool) auth()->user()?->is_super_admin)
             ->brandName(fn (): string => $ksm()?->nama ?? 'KSM Desa')
-            ->brandLogo(fn (): string|Htmlable|null => self::logo($ksm()))
+            ->brandLogo(fn (): string|Htmlable|null => TampilanPanel::logo($ksm()?->logoUrl(), $ksm()?->nama ?? 'KSM Desa'))
             // Guests are on the login/reset pages, where the heading already names the KSM:
             // the logo alone, larger. Inside the app: logo with the name beside it.
-            ->brandLogoHeight(fn (): string => auth()->check() ? '2.75rem' : '6rem')
-            ->renderHook(PanelsRenderHook::HEAD_END, fn (): string => self::gayaLatarLogin($ksm()), scopes: Login::class)
+            ->brandLogoHeight(fn (): string => TampilanPanel::tinggiLogo())
+            ->renderHook(PanelsRenderHook::HEAD_END, fn (): string => TampilanPanel::gayaLatarLogin($ksm()?->latarLoginUrl()), scopes: Login::class)
             ->colors([
                 'primary' => Color::Green,
             ])
@@ -101,26 +102,5 @@ class KsmPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
-    }
-
-    private static function logo(?Ksm $ksm): string|Htmlable|null
-    {
-        if (blank($ksm?->logo)) {
-            return null;
-        }
-
-        return auth()->check() ? view('filament.ksm.brand', ['ksm' => $ksm]) : $ksm->logoUrl();
-    }
-
-    /** The KSM's login background (one at random), darkened a little so the card stands out. */
-    private static function gayaLatarLogin(?Ksm $ksm): string
-    {
-        $url = $ksm?->latarLoginUrl();
-
-        if ($url === null) {
-            return '';
-        }
-
-        return '<style>.fi-simple-layout{background:linear-gradient(rgba(15,23,42,.35),rgba(15,23,42,.35)),url("'.$url.'") center/cover no-repeat fixed;}</style>';
     }
 }

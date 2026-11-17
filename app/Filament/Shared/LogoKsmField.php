@@ -11,15 +11,15 @@ use Filament\Forms\Components\FileUpload;
  */
 final class LogoKsmField
 {
-    public static function make(): FileUpload
+    public static function make(string $directory = 'logo-ksm', string $label = 'Logo desa'): FileUpload
     {
         return FileUpload::make('logo')
-            ->label('Logo desa')
+            ->label($label)
             ->image()
             ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
             ->maxSize(1024)
             ->disk('public')
-            ->directory('logo-ksm')
+            ->directory($directory)
             ->visibility('public')
             ->preventFilePathTampering()
             ->helperText('PNG, JPG atau WebP, maks. 1 MB. Tampil di halaman login dan di aplikasi desa.');

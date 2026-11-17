@@ -3,6 +3,9 @@
 KSM Desa — platform multi-tenant: master di `ksmdesa.my.id`, satu KSM per desa di
 subdomain (`<slug>.ksmdesa.my.id`). Laravel 13 + Filament 5, PHP 8.4.
 
+**Pengetahuan proyek** (arsitektur, aturan bisnis, konvensi, jebakan): [`docs/README.md`](docs/README.md).
+Rencana per fase: [`docs/plans/`](docs/plans/).
+
 ## Lokal
 
 ```bash
