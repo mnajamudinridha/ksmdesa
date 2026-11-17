@@ -97,7 +97,7 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
   Sertakan nilai tersimpan di opsi (mis. `PilihanPengguna::petugas($tersimpan)`) agar simpan tanpa perubahan tidak gagal.
 - Tampilan panel (logo + nama, logo besar & latar di login) satu tempat: `App\Filament\Shared\TampilanPanel`; data logo/latar
   lewat trait `App\Models\Concerns\PunyaTampilanLogin` (dipakai `Ksm` dan `PengaturanMaster`; halaman master **Tampilan**).
-- Berkas: avatar di disk `local` (privat, URL bertanda tangan); logo & latar login di disk `public`;
+- Berkas: avatar di disk `local` (privat, URL bertanda tangan); logo & latar login di disk `public` (URL **relatif** `/storage/…`, jangan diubah ke absolut);
   `FileUpload` global `->preventFilePathTampering()`; model menghapus berkas lama di hook `updated`/`deleted`.
   Avatar inisial digambar lokal (`InisialAvatar`) — jangan pakai ui-avatars (membocorkan nama).
 - Setelah mengubah PHP: `vendor/bin/pint --dirty --format agent`.
@@ -128,6 +128,7 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
 | `make:filament-widget --stats-overview/--chart/--table` | menghasilkan Widget biasa + view dengan sufiks ganda | tulis widget manual |
 | Gambar latar bisa menyuntik CSS | path masuk ke `url()` | hanya path `latar-login/[A-Za-z0-9._-]+` (trait `PunyaTampilanLogin`) |
 | Simpan ulang menolak berkas yang sudah tersimpan ("path berkas yang tidak diizinkan") | `preventFilePathTampering()` mencocokkan path dengan model form | form halaman kustom wajib `->model($record)` |
+| Pratinjau unggahan macet "Memuat / Menunggu ukuran berkas" di subdomain (di master normal) | URL disk `public` absolut ke apex → FilePond mengambil berkas lintas-origin, server tanpa header CORS | `filesystems.disks.public.url = '/storage'` (relatif host; semua subdomain melayani `public/storage` yang sama) |
 | SelectFilter `->relationship()` | opsi dimuat dari seluruh tabel relasi (bergantung pada scope tenant implisit) | opsi eksplisit `whereBelongsTo(Filament::getTenant())` |
 
 ## 9. Deploy & operasi

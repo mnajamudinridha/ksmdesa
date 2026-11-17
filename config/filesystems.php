@@ -41,7 +41,11 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Root-relative on purpose: every KSM subdomain serves the same public/storage, so
+            // logos and login backgrounds load from the host being viewed. An absolute APP_URL
+            // made them cross-origin on subdomains, and the upload field (which fetches existing
+            // files by script) could not load them — the server sends no CORS header.
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

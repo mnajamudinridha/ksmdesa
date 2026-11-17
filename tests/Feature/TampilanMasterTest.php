@@ -66,7 +66,7 @@ class TampilanMasterTest extends TestCase
             ->assertSee(self::GAYA_LATAR, false)
             ->assertSee('/storage/latar-login/balai.jpg', false)
             ->assertSee('height: 6rem', false)
-            ->assertSee('<link rel="icon" href="http://ksmdesa.test/storage/logo-master/logo.png"', false);
+            ->assertSee('<link rel="icon" href="/storage/logo-master/logo.png"', false);
     }
 
     public function test_inside_the_master_panel_the_logo_carries_the_panel_name(): void

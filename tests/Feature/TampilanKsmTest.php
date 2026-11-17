@@ -33,12 +33,12 @@ class TampilanKsmTest extends TestCase
             ->assertSee(self::GAYA_LATAR, false)
             ->assertSee('/storage/latar-login/sawah.jpg', false)
             ->assertSee('height: 6rem', false)
-            ->assertSee('<link rel="icon" href="http://ksmdesa.test/storage/logo-ksm/logo.png"', false);
+            ->assertSee('<link rel="icon" href="/storage/logo-ksm/logo.png"', false);
 
         $this->get('http://polos.ksmdesa.test/login')
             ->assertOk()
             ->assertDontSee(self::GAYA_LATAR, false)
-            ->assertSee('<link rel="icon" href="http://ksmdesa.test/storage/logo-ksm/polos.png"', false);
+            ->assertSee('<link rel="icon" href="/storage/logo-ksm/polos.png"', false);
     }
 
     public function test_only_paths_the_upload_produces_reach_the_css(): void
