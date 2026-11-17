@@ -16,13 +16,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * A KSM (Kelompok Swadaya Masyarakat) — one per village, served on <slug>.<APP_DOMAIN>.
  * This is the tenant of the `ksm` Filament panel.
  */
 #[Table('ksm')]
-#[Fillable(['nama', 'slug', 'desa', 'logo', 'latar_login', 'sandi_default_hash'])]
+#[Fillable(['nama', 'slug', 'desa', 'logo', 'latar_login', 'sandi_default_hash', 'saldo_awal', 'kas_mulai'])]
 // The hash never reaches form state / the browser.
 #[Hidden(['sandi_default_hash'])]
 class Ksm extends Model implements HasAvatar, HasName
@@ -34,6 +35,11 @@ class Ksm extends Model implements HasAvatar, HasName
     {
         // A new default password follows every account that still uses the default
         // (auto-created and never changed). Query builder: the value is already a hash.
+        // Rows go with the database cascade (no model events), so their receipt files are removed here.
+        static::deleted(function (Ksm $ksm): void {
+            Storage::disk('local')->deleteDirectory("bukti-kas/{$ksm->getKey()}");
+        });
+
         static::updated(function (Ksm $ksm): void {
             if ($ksm->wasChanged('sandi_default_hash') && filled($ksm->sandi_default_hash)) {
                 User::query()
@@ -44,6 +50,24 @@ class Ksm extends Model implements HasAvatar, HasName
                     ->update(['password' => $ksm->sandi_default_hash]);
             }
         });
+    }
+
+    /**
+     * Same as the column default, so a KSM made in code (not re-read) has an opening balance too —
+     * the profile form requires one.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'saldo_awal' => 0,
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'saldo_awal' => 'integer',
+            'kas_mulai' => 'date',
+        ];
     }
 
     /** The KSM switcher shows the logo instead of initials. */
@@ -113,12 +137,30 @@ class Ksm extends Model implements HasAvatar, HasName
         return $this->hasMany(Wilayah::class);
     }
 
+    /** @return HasMany<KategoriTransaksi, $this> */
+    public function kategoriTransaksi(): HasMany
+    {
+        return $this->hasMany(KategoriTransaksi::class);
+    }
+
+    /** @return HasMany<Mitra, $this> */
+    public function mitra(): HasMany
+    {
+        return $this->hasMany(Mitra::class);
+    }
+
+    /** @return HasMany<TransaksiKas, $this> */
+    public function transaksiKas(): HasMany
+    {
+        return $this->hasMany(TransaksiKas::class);
+    }
+
     /**
      * Relations whose new rows show that a KSM is using the app ("aktif mencatat").
      *
      * @var list<string>
      */
-    public const RELASI_CATATAN = ['pengangkutan', 'pembayaranIuran', 'setoran'];
+    public const RELASI_CATATAN = ['pengangkutan', 'pembayaranIuran', 'setoran', 'transaksiKas'];
 
     /** A KSM counts as "aktif mencatat" when it recorded something within this many days. */
     public const int HARI_AKTIF_MENCATAT = 7;
@@ -128,7 +170,7 @@ class Ksm extends Model implements HasAvatar, HasName
         return now()->subDays(self::HARI_AKTIF_MENCATAT);
     }
 
-    /** KSMs that recorded anything (rounds, fees, deposits) since $sejak — an instant, compared with created_at. */
+    /** KSMs that recorded anything (rounds, fees, deposits, cash entries) since $sejak — an instant, compared with created_at. */
     public function scopeAktifMencatat(Builder $query, CarbonInterface $sejak): Builder
     {
         return $query->where(function (Builder $ada) use ($sejak): void {

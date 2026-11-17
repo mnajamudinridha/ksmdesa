@@ -296,7 +296,7 @@ class LaporanOperasionalTest extends TestCase
             ->assertDontSeeLivewire(OperasionalPeriodeStats::class);
 
         $this->assertSame(
-            ['Tanpa RT/RW' => '1', 'Tanpa nomor HP' => '2', 'Tanpa lokasi' => '2'],
+            ['Tanpa RT/RW' => '1', 'Tanpa nomor HP' => '2', 'Tanpa lokasi' => '2', 'Transaksi tanpa bukti' => '0'],
             $this->nilaiStat(Livewire::test(KelengkapanDataStats::class)),
         );
 

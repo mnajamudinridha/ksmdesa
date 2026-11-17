@@ -8,6 +8,7 @@ use App\Filament\Widgets\RingkasanPerKsmTable;
 use App\Models\Ksm;
 use App\Models\Pelanggan;
 use App\Models\PembayaranIuran;
+use App\Models\TransaksiKas;
 use App\Models\User;
 use App\Support\TerimaIuran;
 use Carbon\CarbonImmutable;
@@ -81,6 +82,15 @@ class DasborMasterTest extends TestCase
             ->filterTable('belum_aktif')
             ->assertCanSeeTableRecords([$this->b, $this->c])
             ->assertCanNotSeeTableRecords([$this->a]);
+    }
+
+    public function test_a_cash_book_entry_counts_as_recording(): void
+    {
+        $transaksi = TransaksiKas::factory()->for($this->c)->create();
+        $transaksi->forceFill(['created_at' => now()->subDays(2)])->save();
+
+        Livewire::test(RingkasanPerKsmTable::class)
+            ->assertTableColumnStateSet('status', 'Aktif mencatat', $this->c);
     }
 
     public function test_village_admin_cannot_see_master_widgets(): void

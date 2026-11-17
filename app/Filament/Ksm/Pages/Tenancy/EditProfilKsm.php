@@ -5,6 +5,8 @@ namespace App\Filament\Ksm\Pages\Tenancy;
 use App\Filament\Shared\LatarLoginField;
 use App\Filament\Shared\LogoKsmField;
 use App\Filament\Shared\SandiDefaultField;
+use App\Support\Hari;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Tenancy\EditTenantProfile;
 use Filament\Schemas\Components\Section;
@@ -53,6 +55,26 @@ class EditProfilKsm extends EditTenantProfile
                     ->description('Akun warga dibuat otomatis dari data pelanggan dan login dengan sandi ini sampai warga menggantinya sendiri.')
                     ->schema([
                         SandiDefaultField::make(),
+                    ]),
+                Section::make('Buku kas')
+                    ->description('Saldo kas = saldo awal + semua pemasukan − pengeluaran sejak tanggal mulai pembukuan.')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('saldo_awal')
+                            ->label('Saldo kas awal')
+                            ->numeric()
+                            ->integer()
+                            ->prefix('Rp')
+                            ->minValue(0)
+                            ->maxValue(1_000_000_000_000)
+                            ->default(0)
+                            ->required(),
+                        DatePicker::make('kas_mulai')
+                            ->label('Mulai pembukuan')
+                            ->native(false)
+                            ->displayFormat('d M Y')
+                            ->maxDate(fn (): string => Hari::tanggal())
+                            ->helperText('Uang yang ada di kas pada pagi hari tanggal ini = saldo awal. Kosongkan untuk menghitung dari catatan pertama.'),
                     ]),
             ]);
     }
