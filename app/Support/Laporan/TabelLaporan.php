@@ -22,6 +22,17 @@ final readonly class TabelLaporan
     ) {}
 
     /**
+     * The total row, or none when the section has no rows (an all-zero "Jumlah" line would hide
+     * the "no data" message and add nothing).
+     *
+     * @return array<string, scalar|null>|null
+     */
+    public function totalTampil(): ?array
+    {
+        return $this->baris === [] ? null : $this->total;
+    }
+
+    /**
      * Rows keyed for a Filament custom-data table; the total row is marked "__total".
      *
      * @return array<string, array<string, mixed>>
@@ -34,8 +45,8 @@ final readonly class TabelLaporan
             $rekaman[(string) $nomor] = $baris;
         }
 
-        if ($this->total !== null) {
-            $rekaman['total'] = [...$this->total, '__total' => true];
+        if (($total = $this->totalTampil()) !== null) {
+            $rekaman['total'] = [...$total, '__total' => true];
         }
 
         return $rekaman;

@@ -59,8 +59,8 @@ final class EksporXlsx
                 $writer->addRow(self::baris($bagian->kolom, $baris, tebal: false));
             }
 
-            if ($bagian->total !== null) {
-                $writer->addRow(self::baris($bagian->kolom, $bagian->total, tebal: true));
+            if (($total = $bagian->totalTampil()) !== null) {
+                $writer->addRow(self::baris($bagian->kolom, $total, tebal: true));
             }
 
             if (filled($bagian->catatan)) {

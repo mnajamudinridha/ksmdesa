@@ -7,9 +7,12 @@ use App\Filament\Ksm\Widgets\DaftarTugasHariIni;
 use App\Filament\Ksm\Widgets\IuranPerBulanChart;
 use App\Filament\Ksm\Widgets\IuranStatsOverview;
 use App\Filament\Ksm\Widgets\KelengkapanDataStats;
+use App\Filament\Ksm\Widgets\KeuanganStats;
+use App\Filament\Ksm\Widgets\KomposisiPemasukanChart;
 use App\Filament\Ksm\Widgets\OperasionalStatsOverview;
 use App\Filament\Ksm\Widgets\RiwayatIuranSaya;
 use App\Filament\Ksm\Widgets\RiwayatPengangkutanSaya;
+use App\Filament\Ksm\Widgets\TrenKasChart;
 use App\Filament\Ksm\Widgets\TugasPetugasStatsOverview;
 use App\Filament\Ksm\Widgets\WargaStatsOverview;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -27,8 +30,11 @@ class Dashboard extends BaseDashboard
         return [
             AccountWidget::class,
             // Admin
+            KeuanganStats::class,
             IuranStatsOverview::class,
             IuranPerBulanChart::class,
+            TrenKasChart::class,
+            KomposisiPemasukanChart::class,
             OperasionalStatsOverview::class,
             BeratPerHariChart::class,
             KelengkapanDataStats::class,

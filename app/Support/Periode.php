@@ -106,6 +106,18 @@ final readonly class Periode
         return $bulan;
     }
 
+    /**
+     * The 12 months ending with $bulanAkhir's month (trend charts) — not a Periode.
+     *
+     * @return list<CarbonImmutable>
+     */
+    public static function duaBelasBulanSampai(CarbonImmutable $bulanAkhir): array
+    {
+        $akhir = $bulanAkhir->startOfMonth();
+
+        return array_map(fn (int $mundur): CarbonImmutable => $akhir->subMonthsNoOverflow($mundur), range(11, 0));
+    }
+
     /** The previous month, or the previous year. */
     public function sebelumnya(): self
     {
