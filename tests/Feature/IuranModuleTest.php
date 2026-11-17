@@ -95,6 +95,20 @@ class IuranModuleTest extends TestCase
         $this->assertDatabaseCount('pembayaran_iuran', 0);
     }
 
+    public function test_choosing_a_customer_fills_their_fee_but_never_another_ksms(): void
+    {
+        $milikSendiri = Pelanggan::factory()->for($this->ksm)->create(['iuran_bulanan' => 50_000]);
+        $milikKsmLain = $this->diKsmLain(fn () => Pelanggan::factory()->create(['iuran_bulanan' => 777_000]));
+
+        Livewire::test(ManagePembayaranIurans::class)
+            ->mountAction('create')
+            ->fillForm(['pelanggan_id' => $milikSendiri->id])
+            ->assertSchemaStateSet(['nominal' => 50_000])
+            ->fillForm(['nominal' => null])
+            ->fillForm(['pelanggan_id' => $milikKsmLain->id])
+            ->assertSchemaStateSet(['nominal' => null]);
+    }
+
     public function test_a_second_payment_for_the_same_month_is_rejected(): void
     {
         $pelanggan = Pelanggan::factory()->for($this->ksm)->create();

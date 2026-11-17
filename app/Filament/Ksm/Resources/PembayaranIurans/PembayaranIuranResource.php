@@ -3,7 +3,6 @@
 namespace App\Filament\Ksm\Resources\PembayaranIurans;
 
 use App\Filament\Ksm\Resources\PembayaranIurans\Pages\ManagePembayaranIurans;
-use App\Models\Pelanggan;
 use App\Models\PembayaranIuran;
 use BackedEnum;
 use Closure;
@@ -54,7 +53,8 @@ class PembayaranIuranResource extends Resource
                     ->required()
                     ->live()
                     ->afterStateUpdated(function (?string $state, Set $set): void {
-                        if ($pelanggan = Pelanggan::find($state)) {
+                        // Look up through the tenant explicitly rather than relying on the panel's implicit scope.
+                        if ($pelanggan = Filament::getTenant()->pelanggan()->find($state)) {
                             $set('nominal', $pelanggan->iuran_bulanan);
                         }
                     })
@@ -68,6 +68,7 @@ class PembayaranIuranResource extends Resource
                     ->required()
                     ->rule(fn (Get $get, ?PembayaranIuran $record): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get, $record): void {
                         $sudahAda = PembayaranIuran::query()
+                            ->whereBelongsTo(Filament::getTenant())
                             ->where('pelanggan_id', $get('pelanggan_id'))
                             ->whereDate('periode', Carbon::parse($value)->startOfMonth())
                             ->when($record, fn ($query) => $query->whereKeyNot($record->getKey()))

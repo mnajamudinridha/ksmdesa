@@ -7,6 +7,7 @@ use App\Models\Pelanggan;
 use App\Models\TarifLayanan;
 use BackedEnum;
 use Filament\Actions\EditAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -56,7 +57,8 @@ class PelangganResource extends Resource
                     ->preload()
                     ->live()
                     ->afterStateUpdated(function (?string $state, Set $set): void {
-                        if ($tarif = TarifLayanan::find($state)) {
+                        // Look up through the tenant explicitly rather than relying on the panel's implicit scope.
+                        if ($tarif = Filament::getTenant()->tarifLayanan()->find($state)) {
                             $set('iuran_bulanan', $tarif->nominal);
                         }
                     }),
