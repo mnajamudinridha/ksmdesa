@@ -173,6 +173,33 @@ class PetugasIuranTest extends TestCase
         $this->assertSame($this->rumahA->id, $november->pelanggan_id);
     }
 
+    public function test_petugas_can_also_record_from_the_iuran_diterima_page(): void
+    {
+        $this->actingAs($this->petugasA);
+
+        Livewire::test(ManagePembayaranIurans::class)
+            ->assertActionVisible('terimaIuran')
+            ->callAction('terimaIuran', data: ['pelanggan_id' => $this->rumahA->id, 'bulan' => ['2026-11-01']])
+            ->assertHasNoFormErrors();
+
+        $pembayaran = PembayaranIuran::query()->sole();
+        $this->assertTrue($pembayaran->pelanggan->is($this->rumahA));
+        $this->assertSame($this->petugasA->id, $pembayaran->petugas_id);
+        $this->assertSame(25_000, $pembayaran->nominal);
+
+        // Another petugas's house or an inactive one is not on the list, so it is rejected.
+        foreach ([$this->rumahB, $this->rumahNonaktif] as $bukan) {
+            Livewire::test(ManagePembayaranIurans::class)
+                ->callAction('terimaIuran', data: ['pelanggan_id' => $bukan->id, 'bulan' => ['2026-10-01'], 'nominal' => 25_000])
+                ->assertHasFormErrors(['pelanggan_id' => 'in']);
+        }
+
+        $this->assertSame(1, PembayaranIuran::query()->count());
+
+        $this->actingAs($this->admin);
+        Livewire::test(ManagePembayaranIurans::class)->assertActionHidden('terimaIuran');
+    }
+
     public function test_warga_history_says_who_received_the_cash(): void
     {
         TerimaIuran::catat($this->rumahA, $this->petugasA, ['2026-11-01'], 25_000, '2026-11-17');
