@@ -1,12 +1,23 @@
 # Blueprint Fase 5: Dasbor analitik & laporan (mockup "KSM Circular Economy Dashboard")
 
-Status: **DISETUJUI (2026-11-17). Fase 5A DIIMPLEMENTASIKAN; 5B dan 5C menyusul.** Catatan implementasi 5A:
+Status: **DISETUJUI (2026-11-17). Fase 5A dan 5B DIIMPLEMENTASIKAN; 5C menyusul.** Catatan implementasi 5A:
 migrasi wilayah **aditif** (kolom `rt`/`rw` lama dibiarkan, tidak dihapus); `HalamanLaporan` memakai `abstract tabelLaporan(Periode): list<TabelLaporan>` (bukan `pembangun()`); `rtTerlayani()` menerima
 baris `perWilayah()` (tidak menghitung ulang); aturan cetak = A4 **lanskap**, warna dipaksa gelap-di-putih (mode gelap),
 judul layar disembunyikan (kop sudah memuatnya); `TabelLaporanWidget::$isLazy = false` agar cetak tidak menangkap tabel yang
 masih memuat; lapisan filter KSM eksplisit diuji dengan berpindah ke panel master (scope tenant Filament hanya berjalan di
 panel `ksm`); nilai kartu Stat diuji lewat `Tests\Concerns\BacaNilaiStat`. Audit keamanan (skill `filament-security-audit`): 1 temuan —
-injeksi rumus Excel (teks berawalan `=` ditulis OpenSpout sebagai rumus) — diperbaiki dengan sel teks eksplisit. 20 uji sabotase merah sesuai harapan. Lanjutan dari Fase 1–3
+injeksi rumus Excel (teks berawalan `=` ditulis OpenSpout sebagai rumus) — diperbaiki dengan sel teks eksplisit. 20 uji sabotase merah sesuai harapan.
+Catatan implementasi 5B: filter tanggal Buku Kas memakai `Filter::form()` (`schema()` deprecated di v5); `Ksm::$attributes['saldo_awal'] = 0`
+(model baru dari kode belum membaca default kolom); `RingkasanKas` menambah `rincianPemasukan()`/`rincianPengeluaran()` (jumlah transaksi
+untuk laporan) dan `perBulan()` meneruskan saldo bulan ke bulan; `TabelLaporan::totalTampil()` — bagian tanpa baris tidak diberi baris
+"Jumlah" (layar & Excel); widget keuangan tidak polling (bawaan Filament 5 detik); judul halaman Buku Kas = "Buku Kas"; kolom
+"Catatan terakhir" panel master ikut membaca transaksi kas. Tidak ada kategori bawaan — admin membuat sendiri (keputusan §0.2).
+Review keamanan independen 5B: tidak ada celah yang bisa dipakai petugas/warga/KSM lain. Dua perbaikan: (1) bukti disimpan
+per KSM (`bukti-kas/{id KSM}`) dan foldernya dihapus di `Ksm::deleted` — cascade DB tidak memicu event model, jadi berkas
+tertinggal; (2) bukti diunduh lewat aksi baris "Unduh bukti" (`Storage::download`, otorisasi aksi + kebijakan), `FileUpload::downloadable()`
+alih-alih `openable()` — Laravel menyajikan berkas privat dengan CSP `sandbox` sehingga PDF tidak terbuka di Chrome; tautan
+bertanda tangan di tabel (§6.6 kolom `bukti` ->url) dihapus. 26 + 4 uji sabotase merah sesuai harapan.
+Lanjutan dari Fase 1–3
 (`2026-11-17-peran-pengguna-dan-pengangkutan.md`) dan Fase 4 (`2026-11-17-fase-4-petugas-catat-iuran.md`);
 semua aturan kanonik di sana (`App\Support\Hari`, `NomorHp`, tenancy satu-DB, `diKsmLain`, uji sabotase,
 `StatusIuran`, status setor) tetap berlaku. Disusun dengan skill `planning-filament` (Filament Blueprint v2.4).

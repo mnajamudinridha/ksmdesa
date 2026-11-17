@@ -51,8 +51,11 @@ ksm ─┬─ users (ksm_id, peran, no_hp unik per KSM, pakai_sandi_default, akt
      │    └─ pembayaran_iuran (periode, nominal, dibayar_pada, petugas_id, setoran_id)  unik (pelanggan, periode)
      ├─ pengangkutan (petugas_id, tanggal)  unik (petugas, tanggal)
      │    └─ pengangkutan_rincian (pelanggan_id, status, perkiraan_kg)  unik (pengangkutan, pelanggan)
-     └─ setoran (petugas_id, diterima_oleh_id, tanggal)
-ksm: logo, latar_login (json, ≤3), sandi_default_hash (#[Hidden])
+     ├─ setoran (petugas_id, diterima_oleh_id, tanggal)
+     ├─ kategori_transaksi (jenis masuk|keluar, nama, aktif)  unik (ksm, jenis, nama)
+     ├─ mitra (nama, jenis, kontak, no_hp, aktif)  unik (ksm, nama)
+     └─ transaksi_kas (tanggal, jenis, kategori_transaksi_id?, mitra_id? (hanya masuk), nominal, uraian, bukti?, dicatat_oleh_id)
+ksm: logo, latar_login (json, ≤3), sandi_default_hash (#[Hidden]), saldo_awal, kas_mulai (buku kas)
 pengaturan_master (satu baris): logo, latar_login — tampilan panel master
 ```
 
@@ -75,7 +78,9 @@ Pengguna tidak pernah dihapus (dinonaktifkan). FK ke `users` dari tabel yang iku
 | Tanggal kas iuran | `PembayaranIuran::scopeDiterimaAntara` | `COALESCE(dibayar_pada, periode)` — iuran impor tanpa tanggal masuk pada tanggal 1 bulan iurannya. Rekap Iuran & dasbor iuran tetap per `periode`. |
 | Cakupan per RT | `RingkasanPengangkutan::perWilayah()` | Baris tiap RT + "Tanpa RT" + "Pelanggan nonaktif"; cakupan = pelanggan **aktif saat ini** yang diangkut ≥1× ÷ aktif. Σ kg semua baris = `berat()` periode. |
 | Tabel laporan | `App\Support\Laporan\TabelLaporan` + `Laporan…` | Satu objek untuk layar (widget `TabelLaporanWidget`), Excel (`EksporXlsx`), dan cetak — angka tidak bisa berbeda. |
-| KSM aktif mencatat | `Ksm::scopeAktifMencatat`, `Ksm::HARI_AKTIF_MENCATAT` | Ada catatan baru (`created_at`) di `Ksm::RELASI_CATATAN` dalam 7 hari. Dipakai stat, badge, dan filter panel master. |
+| KSM aktif mencatat | `Ksm::scopeAktifMencatat`, `Ksm::HARI_AKTIF_MENCATAT` | Ada catatan baru (`created_at`) di `Ksm::RELASI_CATATAN` (pengangkutan, iuran, setoran, transaksi kas) dalam 7 hari. Dipakai stat, badge, dan filter panel master. |
+| Kas & saldo | `App\Support\RingkasanKas` | Masuk = iuran (tanggal kas) + transaksi masuk (+ penjualan material 5C); keluar = transaksi keluar. Saldo hari D = `saldo_awal` + masuk − keluar dari `kas_mulai` s.d. D; sebelum `kas_mulai` → null ("—"). Arus selalu dilaporkan. Uang di tangan petugas termasuk saldo. |
+| Kategori & mitra transaksi | `PilihanMaster::kategori()/mitra()`, hook `TransaksiKas::saving` | Kategori hanya dari jenis yang sama (aktif + tersimpan); kategori terpakai: jenis terkunci, tidak bisa dihapus. Nama "Iuran"/"Penjualan material" ditolak (dihitung otomatis). Mitra hanya untuk pemasukan (hook mengosongkan pada pengeluaran). |
 
 ## 5. Peran & akses
 
@@ -87,7 +92,8 @@ Pengguna tidak pernah dihapus (dinonaktifkan). FK ke `users` dari tabel yang iku
 | Terima iuran (widget Tugas hari ini) | – | rumah tugasnya yang aktif | – |
 | Pengangkutan | semua | miliknya; ubah sampai akhir hari berikutnya | riwayat rumahnya di dasbor |
 | Setoran petugas | kelola, batalkan | – | – |
-| Profil KSM (nama, logo, latar login, sandi default) | ya | – | – |
+| Profil KSM (nama, logo, latar login, sandi default, saldo awal & mulai pembukuan) | ya | – | – |
+| Buku Kas, Kategori Transaksi, Mitra, Analitik & Laporan | kelola / lihat (data master terpakai: nonaktifkan, tidak bisa dihapus) | – | – |
 
 Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat iuran & pengangkutan).
 
@@ -110,7 +116,7 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
   Sertakan nilai tersimpan di opsi (mis. `PilihanPengguna::petugas($tersimpan)`) agar simpan tanpa perubahan tidak gagal.
 - Tampilan panel (logo + nama, logo besar & latar di login) satu tempat: `App\Filament\Shared\TampilanPanel`; data logo/latar
   lewat trait `App\Models\Concerns\PunyaTampilanLogin` (dipakai `Ksm` dan `PengaturanMaster`; halaman master **Tampilan**).
-- Berkas: avatar di disk `local` (privat, URL bertanda tangan); logo & latar login di disk `public` (URL **relatif** `/storage/…`, jangan diubah ke absolut);
+- Berkas: avatar (URL bertanda tangan) dan bukti kas (`bukti-kas/{id KSM}`, diunduh lewat aksi) di disk `local` (privat); logo & latar login di disk `public` (URL **relatif** `/storage/…`, jangan diubah ke absolut);
   `FileUpload` global `->preventFilePathTampering()`; model menghapus berkas lama di hook `updated`/`deleted`.
   Avatar inisial digambar lokal (`InisialAvatar`) — jangan pakai ui-avatars (membocorkan nama).
 - Setelah mengubah PHP: `vendor/bin/pint --dirty --format agent`.
@@ -148,6 +154,13 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
 | Cetak laporan kosong / teks tak terbaca | widget lazy belum dimuat; mode gelap mencetak teks terang tanpa latar | `TabelLaporanWidget::$isLazy = false`; `@media print` paksa warna gelap di latar putih, A4 lanskap |
 | `assertSeeInOrder(['Label', '2'])` pada kartu Stat lolos padahal salah | "2" ada di mana saja di HTML | baca nilai kartu dengan trait `Tests\Concerns\BacaNilaiStat` |
 | Widget dasbor tak muncul di respons HTTP tes | widget Filament lazy (placeholder) | `assertSeeLivewire(Widget::class)` |
+| Filter tabel kustom: `->schema([...])` deprecated | Filament 5 `Filter` memakai `->form([...])` | pakai `->form()` |
+| Isian wajib Profil KSM kosong di tes (`saldo_awal`) | instans dari factory tidak membaca default kolom DB | default juga di model (`Ksm::$attributes`) |
+| Uji `scopedUnique` dengan `assertHasFormErrors(['x' => 'unique'])` gagal | `scopedUnique` aturan closure (bukan aturan bernama) | beri `->validationMessages(['unique' => '…'])` dan uji teks pesannya |
+| `callAction` kedua di komponen yang sama: "Action [create] was not found" | aksi yang gagal validasi tetap ter-mount | panggil di `Livewire::test()` baru |
+| Widget Stat/Chart memuat ulang tiap 5 detik | bawaan `CanPoll` `'5s'` | widget laporan/keuangan: `protected ?string $pollingInterval = null` |
+| Bukti PDF tidak terbuka di Chrome | Laravel menyajikan berkas disk `local` dengan CSP `sandbox`; penampil PDF tidak berjalan di dokumen ber-sandbox | unduh lewat aksi (`Storage::download`, ditangkap Livewire) dan `FileUpload::downloadable()`, bukan `openable()` |
+| Berkas bukti tertinggal saat KSM dihapus | cascade DB menghapus baris tanpa event model | bukti per KSM (`bukti-kas/{id}`), `Ksm::deleted` menghapus foldernya (avatar masih punya celah yang sama) |
 | Nama `=HYPERLINK(…)` jadi rumus aktif di Excel | OpenSpout `Cell::fromValue()` membuat sel rumus untuk teks berawalan `=`; petugas bisa mengganti namanya sendiri | semua teks ditulis sebagai `StringCell` (`EksporXlsx::sel`); tes memeriksa XML lembar tanpa `<f>` (pembaca OpenSpout mengembalikan teks rumus apa adanya) |
 
 ## 9. Deploy & operasi
@@ -171,7 +184,8 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
 | — | Warga hanya dari Pelanggan; Pengguna = admin & petugas; ActionGroup; Section; branding (logo + nama, latar login) | catatan di dokumen yang sama |
 | 4 | Petugas catat iuran, setoran ke pengurus; logo & latar login panel master | [plans/2026-11-17-fase-4-petugas-catat-iuran.md](plans/2026-11-17-fase-4-petugas-catat-iuran.md) |
 | 5A | Master RT/RW, dasbor eksplisit + Kelengkapan data, Analitik & Laporan Operasional (Excel, cetak), Excel Rekap Iuran, widget panel master | [plans/2026-11-17-fase-5-dasbor-dan-laporan.md](plans/2026-11-17-fase-5-dasbor-dan-laporan.md) §5 |
+| 5B | Buku Kas (bukti privat), Kategori Transaksi, Mitra, saldo awal & mulai pembukuan, Analitik & Laporan Keuangan, kartu keuangan di dasbor | dokumen yang sama §6 |
 
 **Menunggu keputusan pemilik:** kebijakan `StatusIuran::tentukan()` (kurang/lebih/nonaktif), setelan email (`MAIL_MAILER=log`).
-**Berikutnya:** Fase 5B (buku kas, mitra, keuangan) lalu 5C (material, lingkungan, kemitraan, kinerja) —
+**Berikutnya:** Fase 5C (material, lingkungan, kemitraan, kinerja) —
 rencana disetujui: [plans/2026-11-17-fase-5-dasbor-dan-laporan.md](plans/2026-11-17-fase-5-dasbor-dan-laporan.md).
