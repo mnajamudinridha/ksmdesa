@@ -16,7 +16,6 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\NavigationItem;
-use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -68,7 +67,7 @@ class KsmPanelProvider extends PanelProvider
                 'primary' => Color::Green,
             ])
             // Same order as the dashboard mockup's sidebar.
-            ->navigationGroups(['Data Input', 'Laporan', 'Data Master'])
+            ->navigationGroups(['Analitik', 'Data Input', 'Laporan', 'Data Master'])
             // The tenant menu (home of the default profile link) is hidden, so link the profile here.
             ->navigationItems([
                 NavigationItem::make('Profil KSM')
@@ -80,10 +79,8 @@ class KsmPanelProvider extends PanelProvider
                     ->visible(fn (): bool => (bool) auth()->user()?->isAdminKsm()),
             ])
             ->discoverResources(in: app_path('Filament/Ksm/Resources'), for: 'App\Filament\Ksm\Resources')
+            // Includes App\Filament\Ksm\Pages\Dashboard, which replaces Filament's default dashboard.
             ->discoverPages(in: app_path('Filament/Ksm/Pages'), for: 'App\Filament\Ksm\Pages')
-            ->pages([
-                Dashboard::class,
-            ])
             ->discoverWidgets(in: app_path('Filament/Ksm/Widgets'), for: 'App\Filament\Ksm\Widgets')
             ->widgets([
                 AccountWidget::class,

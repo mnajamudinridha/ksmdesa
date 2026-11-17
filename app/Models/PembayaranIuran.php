@@ -75,6 +75,15 @@ class PembayaranIuran extends Model
         return $query->whereNotNull('petugas_id')->whereNull('setoran_id');
     }
 
+    /**
+     * Received between two village dates (Y-m-d, inclusive), by the day the cash came in;
+     * payments without that date (the imported ledger) count on the first day of their month.
+     */
+    public function scopeDiterimaAntara(Builder $query, string $dari, string $sampai): Builder
+    {
+        return $query->whereRaw('date(coalesce(dibayar_pada, periode)) between ? and ?', [$dari, $sampai]);
+    }
+
     /** @return 'langsung'|'belum'|'disetor' */
     public function statusSetor(): string
     {

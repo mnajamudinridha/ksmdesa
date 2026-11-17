@@ -9,9 +9,11 @@ use App\Models\Ksm;
 use App\Models\Pelanggan;
 use App\Models\PembayaranIuran;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Concerns\BacaUnduhanXlsx;
 use Tests\TestCase;
 
 /**
@@ -19,6 +21,7 @@ use Tests\TestCase;
  */
 class IuranModuleTest extends TestCase
 {
+    use BacaUnduhanXlsx;
     use RefreshDatabase;
 
     private Ksm $ksm;
@@ -138,5 +141,30 @@ class IuranModuleTest extends TestCase
             ->assertCanSeeTableRecords([$a, $b])
             ->assertSee('Rp75.000')
             ->assertDontSee('Rp999.000');
+    }
+
+    public function test_rekap_excel_holds_the_customers_shown_by_the_table_filter(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-11-17 09:00', 'Asia/Makassar'));
+        $aktif = Pelanggan::factory()->for($this->ksm)->create(['nama' => 'Rumah Aktif', 'nomor_urut' => 1]);
+        $nonaktif = Pelanggan::factory()->for($this->ksm)->nonaktif()->create(['nama' => 'Rumah Pindah', 'nomor_urut' => 2]);
+        PembayaranIuran::factory()->for($aktif)->create(['periode' => '2026-04-01', 'nominal' => 25_000]);
+        PembayaranIuran::factory()->for($aktif)->create(['periode' => '2026-05-01', 'nominal' => 25_000]);
+        PembayaranIuran::factory()->for($nonaktif)->create(['periode' => '2026-04-01', 'nominal' => 50_000]);
+        $this->diKsmLain(fn () => PembayaranIuran::factory()->create(['periode' => '2026-04-01', 'nominal' => 999_000]));
+
+        $komponen = Livewire::test(RekapIuran::class, ['tahun' => 2026])
+            ->filterTable('aktif', true)
+            ->callAction('unduhExcel')
+            ->assertFileDownloaded('laporan-iuran-makmurjaya-2026.xlsx');
+
+        $baris = $this->bacaUnduhanXlsx($komponen)['Rekap Iuran 2026'];
+        $judul = $this->barisBerlabel($baris, 'No.');
+        $april = array_search('Apr 2026', $judul, true);
+        $total = array_search('Total', $judul, true);
+        $bernama = fn (string $nama): array => collect($baris)->first(fn (array $satu): bool => ($satu[1] ?? null) === $nama) ?? [];
+        $this->assertSame(['Rumah Aktif'], array_values(array_filter(array_column($baris, 1), fn ($nama): bool => str_starts_with((string) $nama, 'Rumah'))));
+        $this->assertSame([25_000, 50_000], [$bernama('Rumah Aktif')[$april], $bernama('Rumah Aktif')[$total]]);
+        $this->assertSame([25_000, 50_000], [$bernama('Jumlah')[$april], $bernama('Jumlah')[$total]]);
     }
 }
