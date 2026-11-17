@@ -11,6 +11,15 @@
 
     RewriteEngine On
 
+    # Canonical host: https, no "www." — works for the master and every tenant
+    # subdomain because it reuses the requested host. Skips ACME challenges.
+    # The capturing condition must come last: %N refers to the last matched RewriteCond.
+    RewriteCond %{REQUEST_URI} !^/\.well-known/
+    RewriteCond %{HTTPS} off [OR]
+    RewriteCond %{HTTP_HOST} ^www\. [NC]
+    RewriteCond %{HTTP_HOST} ^(www\.)?(.+)$ [NC]
+    RewriteRule ^ https://%2%{REQUEST_URI} [L,R=301]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
