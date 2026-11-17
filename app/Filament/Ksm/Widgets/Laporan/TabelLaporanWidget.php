@@ -63,6 +63,8 @@ abstract class TabelLaporanWidget extends TableWidget
                     ->formatStateUsing(fn (mixed $state, array $record): string => $kolom->formatUntuk($record)->tampil($state))
                     ->placeholder('—')
                     ->alignEnd($kolom->format->rataKanan())
+                    // A negative figure (deficit, stock below zero) is a warning.
+                    ->color(fn (mixed $state): ?string => is_numeric($state) && $state < 0 ? 'danger' : null)
                     ->weight(fn (array $record): ?FontWeight => ($record['__total'] ?? false) ? FontWeight::Bold : null),
                 static::kolom(),
             ))

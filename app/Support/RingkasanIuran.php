@@ -23,6 +23,14 @@ final class RingkasanIuran
         return $periode ? Carbon::parse($periode)->startOfMonth() : null;
     }
 
+    /** First fee month ever recorded for the KSM; null when nothing is recorded yet. */
+    public function bulanPertama(): ?Carbon
+    {
+        $periode = PembayaranIuran::query()->whereBelongsTo($this->ksm)->min('periode');
+
+        return $periode ? Carbon::parse($periode)->startOfMonth() : null;
+    }
+
     public function terkumpul(Carbon $bulan): int
     {
         return (int) PembayaranIuran::query()
