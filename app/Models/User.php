@@ -21,6 +21,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * A village user belongs to exactly one KSM and has a role there; a master
@@ -53,6 +54,17 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasDefaul
         // means the account no longer follows the KSM's default password.
         static::saving(function (User $user): void {
             if ($user->isDirty('password') && ! $user->isDirty('pakai_sandi_default')) {
+                $user->pakai_sandi_default = false;
+            }
+
+            // The village default is known to every resident, so only warga may use it. An
+            // account promoted while still on it gets an unknown password (fail closed); the
+            // Pengguna form makes the admin set a real one in the same save.
+            if ($user->pakai_sandi_default && $user->peran !== PeranPengguna::Warga) {
+                if (! $user->isDirty('password')) {
+                    $user->password = Str::password(40);
+                }
+
                 $user->pakai_sandi_default = false;
             }
         });
@@ -112,6 +124,16 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasDefaul
     public function pelangganTugas(): HasMany
     {
         return $this->hasMany(Pelanggan::class, 'petugas_id');
+    }
+
+    /**
+     * Collection rounds this petugas recorded.
+     *
+     * @return HasMany<Pengangkutan, $this>
+     */
+    public function pengangkutan(): HasMany
+    {
+        return $this->hasMany(Pengangkutan::class, 'petugas_id');
     }
 
     /** Master administrators act as admin in every KSM. */

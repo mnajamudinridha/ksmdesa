@@ -12,6 +12,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\Utilities\Get;
 
 /**
  * Form for a village user, used by master (KSM → Pengguna) and by the village admin
@@ -71,14 +72,20 @@ final class PenggunaForm
                 ->revealable()
                 ->minLength(8)
                 ->maxLength(255)
-                ->required(fn (string $operation): bool => $operation === 'create')
+                ->required(fn (string $operation, Get $get, ?User $record): bool => $operation === 'create'
+                    || self::naikDariSandiDefault($record, $get('peran')))
                 ->dehydrated(fn (?string $state): bool => filled($state))
-                ->helperText(fn (string $operation): ?string => $operation === 'edit' ? 'Kosongkan bila tidak diganti.' : null),
+                ->helperText(fn (string $operation, Get $get, ?User $record): ?string => match (true) {
+                    self::naikDariSandiDefault($record, $get('peran')) => 'Wajib: akun ini masih memakai sandi default desa, yang tidak boleh dipakai admin/petugas.',
+                    $operation === 'edit' => 'Kosongkan bila tidak diganti.',
+                    default => null,
+                }),
             ToggleButtons::make('peran')
                 ->options(PeranPengguna::class)
                 ->default(PeranPengguna::Warga)
                 ->inline()
                 ->required()
+                ->live()
                 // Disabled fields are not dehydrated, so an admin cannot demote themselves server-side either.
                 ->disabled($milikSendiri)
                 ->columnSpanFull(),
@@ -87,6 +94,14 @@ final class PenggunaForm
                 ->helperText('Nonaktif = tidak bisa login; riwayatnya tetap tersimpan.')
                 ->disabled($milikSendiri),
         ];
+    }
+
+    /** An account still on the village default being given a role other than warga. */
+    private static function naikDariSandiDefault(?User $record, mixed $peran): bool
+    {
+        $peran = $peran instanceof PeranPengguna ? $peran : PeranPengguna::tryFrom((string) $peran);
+
+        return (bool) $record?->pakai_sandi_default && $peran !== null && $peran !== PeranPengguna::Warga;
     }
 
     private static function sudahDipakai(?Ksm $ksm, string $kolom, ?string $nilai, ?User $kecuali): bool

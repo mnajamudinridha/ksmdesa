@@ -80,6 +80,12 @@ class Pelanggan extends Model
         return $this->hasMany(PembayaranIuran::class);
     }
 
+    /** @return HasMany<PengangkutanRincian, $this> */
+    public function rincianPengangkutan(): HasMany
+    {
+        return $this->hasMany(PengangkutanRincian::class);
+    }
+
     public function punyaPetugasAktif(): bool
     {
         return $this->petugas !== null && $this->petugas->aktif && $this->petugas->peran === PeranPengguna::Petugas;

@@ -1,6 +1,6 @@
 # Blueprint: Peran pengguna, detail pelanggan, dan pengangkutan harian
 
-Status: **Fase 1 & Fase 2 SELESAI & live (2026-11-17)** — Fase 1 a5a60cc (+§3.8, §3.9, fix e50f745); Fase 2 menurut §4.0. Fase 3 belum. Disusun dengan skill `planning-filament` (Filament Blueprint v2.4).
+Status: **Fase 1, 2 & 3 SELESAI (2026-11-17)** — Fase 1 a5a60cc (+§3.8, §3.9, fix e50f745); Fase 2 menurut §4.0; Fase 3 menurut §5 dengan catatan implementasi di bawah. Pengamanan tambahan: akun yang masih memakai sandi default desa tidak boleh naik ke admin/petugas tanpa sandi baru (User saving hook + PenggunaForm + Ksm::updated hanya warga). Disusun dengan skill `planning-filament` (Filament Blueprint v2.4).
 Versi terpasang yang diverifikasi: Laravel 13.42.0 · Filament 5.11.4 · Livewire 4.4.8 · PHPUnit 12 (bukan Pest).
 Sumber verifikasi: Boost `search-docs` + kode sumber terpasang di `vendor/` (rujukan baris disebut di tiap bagian).
 
@@ -63,6 +63,14 @@ php artisan make:filament-widget WargaStatsOverview --panel=ksm --stats-overview
 php artisan make:filament-widget RiwayatIuranSaya --panel=ksm --table --no-interaction
 php artisan make:filament-widget RiwayatPengangkutanSaya --panel=ksm --table --no-interaction
 ```
+
+> **Catatan implementasi Fase 3 (2026-11-17):** `make:filament-widget` dengan flag tipe (`--stats-overview`,
+> `--chart`, `--table`) di versi terpasang menghasilkan `Widget` biasa + view dengan nama bersufiks ganda
+> (mis. `BeratPerHariChartChart`) — ketujuh widget ditulis manual. Resource ditulis manual mengikuti pola file
+> tunggal proyek (`Pengangkutans/PengangkutanResource.php` + `Pages/`). `petugas_id` pada `pengangkutan` memakai
+> `cascadeOnDelete` (bukan restrict): pengguna tak pernah dihapus, dan restrict akan menggagalkan hapus KSM yang
+> juga meng-cascade pengguna. DatePicker menyerahkan nilai `Y-m-d H:i:s` ke rule — aturan "satu ronde per hari"
+> membandingkan `Carbon::parse($value)->toDateString()`.
 
 File yang dibuat **manual** (tanpa generator): `app/Support/KsmDariHost.php`, `app/Support/NomorHp.php`,
 `app/Support/Hari.php`, `app/Filament/Ksm/Pages/Auth/Login.php`, `app/Filament/Ksm/Pages/Tenancy/EditProfilKsm.php`,

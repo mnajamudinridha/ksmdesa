@@ -183,6 +183,39 @@ class AkunWargaTest extends TestCase
         $this->assertSame($hash, $this->ksm->refresh()->sandi_default_hash);
     }
 
+    public function test_promoting_a_default_password_account_requires_a_new_password(): void
+    {
+        $akun = $this->buatPelanggan(['nama' => 'Calon Petugas', 'no_hp_akun' => '081200007777'])->akunWarga;
+
+        Livewire::test(ManageUsers::class)
+            ->callAction(TestAction::make('edit')->table($akun), data: ['peran' => PeranPengguna::Petugas->value])
+            ->assertHasFormErrors(['password' => 'required']);
+        $this->assertSame(PeranPengguna::Warga, $akun->refresh()->peran);
+
+        Livewire::test(ManageUsers::class)
+            ->callAction(TestAction::make('edit')->table($akun), data: ['peran' => PeranPengguna::Petugas->value, 'password' => 'sandi-petugas-1'])
+            ->assertHasNoFormErrors();
+
+        $akun->refresh();
+        $this->assertSame(PeranPengguna::Petugas, $akun->peran);
+        $this->assertFalse($akun->pakai_sandi_default);
+        $this->assertTrue(Hash::check('sandi-petugas-1', $akun->getAuthPassword()));
+    }
+
+    public function test_a_non_warga_account_never_keeps_or_follows_the_village_default(): void
+    {
+        $akun = $this->buatPelanggan(['nama' => 'Dipromosikan Lewat Kode'])->akunWarga;
+
+        $akun->update(['peran' => PeranPengguna::Admin]);
+        $this->assertFalse(Hash::check('desa12345', $akun->refresh()->getAuthPassword()));
+        $this->assertFalse($akun->pakai_sandi_default);
+
+        // Even a row flagged directly in the database is skipped when the default changes.
+        User::query()->whereKey($akun)->update(['pakai_sandi_default' => true]);
+        $this->ksm->update(['sandi_default_hash' => Hash::make('baru-desa-77')]);
+        $this->assertFalse(Hash::check('baru-desa-77', $akun->refresh()->getAuthPassword()));
+    }
+
     public function test_admin_setting_a_password_stops_it_following_the_default(): void
     {
         $akun = $this->buatPelanggan(['nama' => 'Diatur Admin', 'no_hp_akun' => '081200006666'])->akunWarga;

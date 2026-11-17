@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PeranPengguna;
 use Database\Factories\KsmFactory;
 use Filament\Models\Contracts\HasName;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -40,6 +41,7 @@ class Ksm extends Model implements HasName
             if ($ksm->wasChanged('sandi_default_hash') && filled($ksm->sandi_default_hash)) {
                 User::query()
                     ->whereBelongsTo($ksm)
+                    ->where('peran', PeranPengguna::Warga)
                     ->where('pakai_sandi_default', true)
                     ->toBase()
                     ->update(['password' => $ksm->sandi_default_hash]);
@@ -93,5 +95,11 @@ class Ksm extends Model implements HasName
     public function pembayaranIuran(): HasMany
     {
         return $this->hasMany(PembayaranIuran::class);
+    }
+
+    /** @return HasMany<Pengangkutan, $this> */
+    public function pengangkutan(): HasMany
+    {
+        return $this->hasMany(Pengangkutan::class);
     }
 }

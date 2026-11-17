@@ -82,6 +82,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Village Time Zone
+    |--------------------------------------------------------------------------
+    |
+    | Timestamps stay in UTC; "today" for daily pickups and their edit window
+    | is the calendar day in the villages' zone (App\Support\Hari).
+    |
+    */
+
+    'zona_waktu_lokal' => env('APP_ZONA_WAKTU', 'Asia/Makassar'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |
