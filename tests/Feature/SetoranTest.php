@@ -153,6 +153,16 @@ class SetoranTest extends TestCase
         $this->assertSame(3, PembayaranIuran::query()->belumDisetor()->count());
     }
 
+    public function test_an_empty_petugas_list_explains_where_cash_comes_from(): void
+    {
+        PembayaranIuran::query()->update(['setoran_id' => Setoran::factory()->for($this->ksm)->create(['petugas_id' => $this->petugasA->id])->id]);
+
+        $this->assertSame([], SetoranResource::opsiPetugas());
+        Livewire::test(CreateSetoran::class)
+            ->assertSee(SetoranResource::KOSONG)
+            ->assertSee('Terima iuran');
+    }
+
     public function test_other_ksm_deposits_stay_invisible(): void
     {
         $lain = $this->diKsmLain(fn () => Setoran::factory()->create());

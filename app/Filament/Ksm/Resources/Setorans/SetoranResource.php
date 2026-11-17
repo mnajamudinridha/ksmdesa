@@ -67,6 +67,11 @@ class SetoranResource extends Resource
                         Select::make('petugas_id')
                             ->label('Petugas')
                             ->options(fn (): array => self::opsiPetugas())
+                            // An empty list is normal until a petugas records cash with "Terima iuran" — say so.
+                            ->placeholder(fn (): string => self::opsiPetugas() === [] ? self::KOSONG : 'Pilih petugas')
+                            ->helperText(fn (): string => self::opsiPetugas() === []
+                                ? self::ALUR
+                                : 'Hanya petugas yang masih memegang uang iuran (belum disetor).')
                             ->required()
                             ->live()
                             // Default: everything the petugas still holds is ticked.
@@ -141,6 +146,8 @@ class SetoranResource extends Resource
                 ->withCount('pembayaranIuran')
                 ->withSum('pembayaranIuran as total', 'nominal'))
             ->defaultSort('tanggal', 'desc')
+            ->emptyStateHeading('Belum ada setoran')
+            ->emptyStateDescription(self::ALUR)
             ->columns([
                 TextColumn::make('tanggal')
                     ->date('D, d M Y')
@@ -185,6 +192,10 @@ class SetoranResource extends Resource
                 ]),
             ]);
     }
+
+    public const KOSONG = 'Belum ada uang iuran di tangan petugas';
+
+    public const ALUR = 'Uang muncul di sini setelah petugas mencatatnya lewat tombol "Terima iuran" di daftar Tugas hari ini (dasbor petugas). Pembayaran yang dicatat admin di menu Pembayaran Iuran dianggap diterima langsung dan tidak perlu disetor.';
 
     /** "Batalkan setoran": deleting frees its payments (Setoran deleting hook), none is lost. */
     public static function aksiBatal(DeleteAction $action): DeleteAction
