@@ -70,13 +70,14 @@ class ProfilDanFotoTest extends TestCase
             ->assertHasFormErrors(['logo']);
     }
 
-    public function test_tenant_switcher_is_hidden_from_village_users(): void
+    /** Owner's decision 2026-11-17: master administrators no longer get it either. */
+    public function test_tenant_switcher_is_hidden_from_everyone(): void
     {
         $this->actingAs(User::factory()->for($this->ksm)->admin()->create());
         $this->assertFalse(Filament::getPanel('ksm')->hasTenantMenu());
 
         $this->actingAs(User::factory()->superAdmin()->create());
-        $this->assertTrue(Filament::getPanel('ksm')->hasTenantMenu());
+        $this->assertFalse(Filament::getPanel('ksm')->hasTenantMenu());
     }
 
     public function test_user_sets_own_photo_but_not_their_name(): void

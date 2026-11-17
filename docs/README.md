@@ -97,7 +97,7 @@ Pengguna tidak pernah dihapus (dinonaktifkan). FK ke `users` dari tabel yang iku
 | Terima iuran (widget Tugas hari ini) | – | rumah tugasnya yang aktif | – |
 | Pengangkutan | semua | miliknya; ubah sampai akhir hari berikutnya | riwayat rumahnya di dasbor |
 | Setoran petugas | kelola, batalkan | – | – |
-| Profil KSM (nama, logo, latar login, sandi default, saldo awal & mulai pembukuan) | ya | – | – |
+| Profil KSM (nama, logo, latar login, sandi default, saldo awal & mulai pembukuan) — dari sidebar *Data Master*; tidak ada menu pindah KSM (tiap KSM subdomain sendiri) | ya | – | – |
 | Buku Kas, Catatan Material, Kategori Transaksi, Jenis Material, Mitra, Analitik & Laporan | kelola / lihat (data master terpakai: nonaktifkan, tidak bisa dihapus) | – | – |
 
 Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat iuran & pengangkutan).
@@ -201,6 +201,7 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
 | 5A | Master RT/RW, dasbor eksplisit + Kelengkapan data, Analitik & Laporan Operasional (Excel, cetak), Excel Rekap Iuran, widget panel master | [plans/2026-11-17-fase-5-dasbor-dan-laporan.md](plans/2026-11-17-fase-5-dasbor-dan-laporan.md) §5 |
 | 5B | Buku Kas (bukti privat), Kategori Transaksi, Mitra, saldo awal & mulai pembukuan, Analitik & Laporan Keuangan, kartu keuangan di dasbor | dokumen yang sama §6 |
 | 5C | Jenis & Catatan Material (penjualan → kas), Analitik Lingkungan & Kemitraan, Laporan Lingkungan / Kemitraan / Kinerja terintegrasi, kartu progres ekonomi sirkular, lingkungan & kemitraan di dasbor | dokumen yang sama §7 |
+| — | Menu pindah KSM (tenant menu) dihapus untuk semua, termasuk admin pusat | permintaan pemilik 2026-11-17 |
 | — | Grid dasbor tanpa slot kosong: widget pendamping "Selamat datang" (master: KSM belum mencatat 7 hari; admin: petugas belum mencatat hari ini; petugas: ronde terakhir; warga: terakhir diangkut), kartu master ke-6 "Material terpulihkan 30 hari", donat "Komposisi pengeluaran", kartu warga selebar baris | permintaan pemilik 2026-11-17 (tanpa dokumen rencana) |
 
 **Menunggu keputusan pemilik:** kebijakan `StatusIuran::tentukan()` (kurang/lebih/nonaktif), setelan email (`MAIL_MAILER=log`).

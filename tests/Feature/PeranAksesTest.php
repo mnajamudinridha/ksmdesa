@@ -55,6 +55,22 @@ class PeranAksesTest extends TestCase
             ->assertOk();
     }
 
+    public function test_no_one_gets_a_ksm_switcher_and_admins_reach_the_ksm_profile_from_the_sidebar(): void
+    {
+        $ksm = Ksm::factory()->create(['slug' => 'makmurjaya']);
+        Ksm::factory()->create(['nama' => 'KSM Desa Tetangga']);
+
+        foreach ([User::factory()->superAdmin()->create(), User::factory()->for($ksm)->admin()->create()] as $admin) {
+            $this->flushSession();
+            $this->actingAs($admin)
+                ->get('http://makmurjaya.ksmdesa.test/')
+                ->assertOk()
+                ->assertDontSee('fi-tenant-menu', false)
+                ->assertDontSee('KSM Desa Tetangga')
+                ->assertSee('http://makmurjaya.ksmdesa.test/profil-ksm', false);
+        }
+    }
+
     /**
      * Regression (500 in production, 2026-11-17): "Profil saya" is not a tenant page; with the
      * full layout the KSM switcher — shown only to master administrators — needed a tenant.

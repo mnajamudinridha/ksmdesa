@@ -46,16 +46,18 @@ class KsmPanelProvider extends PanelProvider
             ->id('ksm')
             ->path('')
             ->login(Login::class)
-            // Simple layout: /profil-saya is not a tenant page, and the full layout's KSM switcher
-            // (shown to master administrators) needs a tenant — it crashed with a 500.
+            // Simple layout: /profil-saya is not a tenant page, and the full layout's tenant parts
+            // need a tenant (the KSM switcher, since removed, crashed it with a 500).
             ->profile(ProfilSaya::class, isSimple: true)
             // Initials drawn locally: the default provider would send names to ui-avatars.com.
             ->defaultAvatarProvider(InisialAvatar::class)
             ->tenant(Ksm::class, slugAttribute: 'slug')
             ->tenantDomain('{tenant:slug}.'.config('app.domain'))
             ->tenantProfile(EditProfilKsm::class)
-            // Village users belong to one KSM: never offer the others.
-            ->tenantMenu(fn (): bool => (bool) auth()->user()?->is_super_admin)
+            // No KSM switcher for anyone. Village users belong to one KSM; for master administrators
+            // every other KSM is another subdomain with its own host-only session, so switching led
+            // to a login page. "Profil KSM", the menu's other entry, is in the sidebar (below).
+            ->tenantMenu(false)
             ->brandName(fn (): string => $ksm()?->nama ?? 'KSM Desa')
             ->brandLogo(fn (): string|Htmlable|null => TampilanPanel::logo($ksm()?->logoUrl(), $ksm()?->nama ?? 'KSM Desa'))
             // Guests are on the login/reset pages, where the heading already names the KSM:
