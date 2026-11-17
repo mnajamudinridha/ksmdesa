@@ -8,6 +8,7 @@ use App\Models\PembayaranIuran;
 use App\Support\BulanIuran;
 use BackedEnum;
 use Closure;
+use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -15,6 +16,7 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -26,6 +28,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use UnitEnum;
 
 class PembayaranIuranResource extends Resource
@@ -55,6 +58,26 @@ class PembayaranIuranResource extends Resource
             (bool) $user?->isPetugas() => $query->where('petugas_id', $user->getKey()),
             default => $query->whereRaw('1 = 0'),
         };
+    }
+
+    /**
+     * Write under a row lock after re-checking the policy on the fresh row: a deposit made a
+     * moment ago (between the page's check and this write) must still lock a petugas out.
+     *
+     * @param  Closure(PembayaranIuran): bool  $tulis
+     */
+    public static function tulisTerkunci(PembayaranIuran $record, string $kemampuan, Action $action, Closure $tulis): bool
+    {
+        return DB::transaction(function () use ($record, $kemampuan, $action, $tulis): bool {
+            $terkunci = PembayaranIuran::query()->lockForUpdate()->findOrFail($record->getKey());
+
+            if (! auth()->user()?->can($kemampuan, $terkunci)) {
+                Notification::make()->danger()->title('Pembayaran ini baru saja disetor dan tidak bisa diubah lagi.')->send();
+                $action->halt();
+            }
+
+            return $tulis($terkunci);
+        });
     }
 
     public static function getNavigationLabel(): string
@@ -92,10 +115,11 @@ class PembayaranIuranResource extends Resource
                     ->default(now()->startOfMonth())
                     ->helperText('Tanggal mana pun dihitung sebagai bulan itu.')
                     ->required()
-                    ->rule(fn (Get $get, ?PembayaranIuran $record): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get, $record): void {
+                    ->rule(fn (Get $get, ?PembayaranIuran $record): Closure => function (string $attribute, mixed $value, Closure $fail) use ($admin, $get, $record): void {
                         $sudahAda = PembayaranIuran::query()
                             ->whereBelongsTo(Filament::getTenant())
-                            ->where('pelanggan_id', $get('pelanggan_id'))
+                            // A petugas cannot change the customer (field disabled): use the saved one, never the raw state.
+                            ->where('pelanggan_id', $admin() ? $get('pelanggan_id') : $record?->pelanggan_id)
                             ->whereDate('periode', Carbon::parse($value)->startOfMonth())
                             ->when($record, fn ($query) => $query->whereKeyNot($record->getKey()))
                             ->exists();
@@ -123,7 +147,9 @@ class PembayaranIuranResource extends Resource
                 TextInput::make('nominal')
                     ->prefix('Rp')
                     ->numeric()
+                    ->integer()
                     ->minValue(1)
+                    ->maxValue(10_000_000)
                     ->required(),
                 DatePicker::make('dibayar_pada')
                     ->label('Tanggal diterima')
@@ -200,8 +226,10 @@ class PembayaranIuranResource extends Resource
             ])
             ->recordActions([
                 ActionGroup::make([
-                    EditAction::make(),
-                    DeleteAction::make(),
+                    EditAction::make()
+                        ->using(fn (PembayaranIuran $record, array $data, EditAction $action): bool => self::tulisTerkunci($record, 'update', $action, fn (PembayaranIuran $terkunci): bool => $terkunci->update($data))),
+                    DeleteAction::make()
+                        ->using(fn (PembayaranIuran $record, DeleteAction $action): bool => self::tulisTerkunci($record, 'delete', $action, fn (PembayaranIuran $terkunci): bool => (bool) $terkunci->delete())),
                 ]),
             ]);
     }

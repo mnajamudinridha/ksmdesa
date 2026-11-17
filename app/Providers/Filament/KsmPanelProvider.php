@@ -62,6 +62,7 @@ class KsmPanelProvider extends PanelProvider
             // Guests are on the login/reset pages, where the heading already names the KSM:
             // the logo alone, larger. Inside the app: logo with the name beside it.
             ->brandLogoHeight(fn (): string => TampilanPanel::tinggiLogo())
+            ->favicon(fn (): string => TampilanPanel::favicon($ksm()?->logoUrl()))
             ->renderHook(PanelsRenderHook::HEAD_END, fn (): string => TampilanPanel::gayaLatarLogin($ksm()?->latarLoginUrl()), scopes: Login::class)
             ->colors([
                 'primary' => Color::Green,

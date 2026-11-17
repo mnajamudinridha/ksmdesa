@@ -20,6 +20,12 @@ final class TampilanPanel
         return auth()->check() ? view('filament.brand', ['logoUrl' => $logoUrl, 'nama' => $nama]) : $logoUrl;
     }
 
+    /** The browser tab shows the panel's logo; without one, the generic KSM leaf. */
+    public static function favicon(?string $logoUrl): string
+    {
+        return $logoUrl ?? asset('favicon.svg');
+    }
+
     public static function tinggiLogo(): string
     {
         return auth()->check() ? '2.75rem' : '6rem';

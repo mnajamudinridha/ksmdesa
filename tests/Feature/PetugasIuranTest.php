@@ -153,6 +153,26 @@ class PetugasIuranTest extends TestCase
         $this->assertTrue($this->admin->can('delete', $milikB));
     }
 
+    public function test_petugas_corrections_keep_the_amount_limits_and_the_real_customer(): void
+    {
+        TerimaIuran::catat($this->rumahA, $this->petugasA, ['2026-10-01', '2026-11-01'], 25_000, '2026-11-17');
+        $november = PembayaranIuran::query()->whereDate('periode', '2026-11-01')->sole();
+        $this->actingAs($this->petugasA);
+
+        Livewire::test(ManagePembayaranIurans::class)
+            ->callAction(TestAction::make('edit')->table($november), data: ['nominal' => 99_999_999])
+            ->assertHasFormErrors(['nominal' => 'max']);
+
+        // A tampered (disabled) customer must not steer the duplicate-month check: October is
+        // already paid for this payment's real customer, so it is a validation error, not a 500.
+        Livewire::test(ManagePembayaranIurans::class)
+            ->callAction(TestAction::make('edit')->table($november), data: ['pelanggan_id' => $this->rumahB->id, 'periode' => '2026-10-01'])
+            ->assertHasFormErrors(['periode']);
+
+        $this->assertSame('2026-11-01', $november->refresh()->periode->toDateString());
+        $this->assertSame($this->rumahA->id, $november->pelanggan_id);
+    }
+
     public function test_warga_history_says_who_received_the_cash(): void
     {
         TerimaIuran::catat($this->rumahA, $this->petugasA, ['2026-11-01'], 25_000, '2026-11-17');

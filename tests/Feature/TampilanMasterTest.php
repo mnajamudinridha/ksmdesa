@@ -53,7 +53,10 @@ class TampilanMasterTest extends TestCase
 
     public function test_master_login_shows_its_background_and_larger_logo(): void
     {
-        $this->get('http://ksmdesa.test/admin/login')->assertOk()->assertDontSee(self::GAYA_LATAR, false);
+        $this->get('http://ksmdesa.test/admin/login')
+            ->assertOk()
+            ->assertDontSee(self::GAYA_LATAR, false)
+            ->assertSee('<link rel="icon" href="http://ksmdesa.test/favicon.svg"', false);
         $this->assertSame(0, PengaturanMaster::query()->count(), 'reading the look never creates the row');
 
         PengaturanMaster::query()->create(['logo' => 'logo-master/logo.png', 'latar_login' => ['latar-login/balai.jpg']]);
@@ -62,7 +65,8 @@ class TampilanMasterTest extends TestCase
             ->assertOk()
             ->assertSee(self::GAYA_LATAR, false)
             ->assertSee('/storage/latar-login/balai.jpg', false)
-            ->assertSee('height: 6rem', false);
+            ->assertSee('height: 6rem', false)
+            ->assertSee('<link rel="icon" href="http://ksmdesa.test/storage/logo-master/logo.png"', false);
     }
 
     public function test_inside_the_master_panel_the_logo_carries_the_panel_name(): void

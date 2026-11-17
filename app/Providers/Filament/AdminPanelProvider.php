@@ -42,6 +42,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandName('KSM Desa — Master')
             ->brandLogo(fn (): string|Htmlable|null => TampilanPanel::logo(PengaturanMaster::sekarang()->logoUrl(), 'KSM Desa — Master'))
             ->brandLogoHeight(fn (): string => TampilanPanel::tinggiLogo())
+            ->favicon(fn (): string => TampilanPanel::favicon(PengaturanMaster::sekarang()->logoUrl()))
             ->renderHook(PanelsRenderHook::HEAD_END, fn (): string => TampilanPanel::gayaLatarLogin(PengaturanMaster::sekarang()->latarLoginUrl()), scopes: Login::class)
             ->colors([
                 'primary' => Color::Green,
