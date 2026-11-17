@@ -1,6 +1,6 @@
 # Blueprint Fase 5: Dasbor analitik & laporan (mockup "KSM Circular Economy Dashboard")
 
-Status: **DISETUJUI (2026-11-17). Fase 5A dan 5B DIIMPLEMENTASIKAN; 5C menyusul.** Catatan implementasi 5A:
+Status: **DISETUJUI (2026-11-17). Fase 5 SELESAI — 5A, 5B, dan 5C DIIMPLEMENTASIKAN.** Catatan implementasi 5A:
 migrasi wilayah **aditif** (kolom `rt`/`rw` lama dibiarkan, tidak dihapus); `HalamanLaporan` memakai `abstract tabelLaporan(Periode): list<TabelLaporan>` (bukan `pembangun()`); `rtTerlayani()` menerima
 baris `perWilayah()` (tidak menghitung ulang); aturan cetak = A4 **lanskap**, warna dipaksa gelap-di-putih (mode gelap),
 judul layar disembunyikan (kop sudah memuatnya); `TabelLaporanWidget::$isLazy = false` agar cetak tidak menangkap tabel yang
@@ -17,6 +17,18 @@ per KSM (`bukti-kas/{id KSM}`) dan foldernya dihapus di `Ksm::deleted` — casca
 tertinggal; (2) bukti diunduh lewat aksi baris "Unduh bukti" (`Storage::download`, otorisasi aksi + kebijakan), `FileUpload::downloadable()`
 alih-alih `openable()` — Laravel menyajikan berkas privat dengan CSP `sandbox` sehingga PDF tidak terbuka di Chrome; tautan
 bertanda tangan di tabel (§6.6 kolom `bukti` ->url) dihapus. 26 + 4 uji sabotase merah sesuai harapan.
+Catatan implementasi 5C: penjualan material **tidak** disalin ke `transaksi_kas` — `RingkasanKas::penjualanMaterial()` membacanya dari
+`catatan_material`, sehingga tidak bisa terhitung ganda atau tertinggal saat penjualan diubah/dihapus/diganti aktivitasnya (diuji).
+`RingkasanMitra` (baru) menjadi satu sumber angka kemitraan (kartu, grafik, laporan). `RingkasanKinerja::ringkasan()` tidak memuat
+baris persen — keempat indikator ada di tabel "Indikator ekonomi sirkular" (perubahan dalam poin); ringkasan memakai perubahan
+relatif dan "Mitra aktif (saat ini)" (status mitra tidak punya riwayat). `RingkasanMaterial::perJenis()` memuat jenis aktif + jenis
+yang punya catatan s.d. akhir periode, plus baris "Tanpa jenis". Semua widget 5C tanpa polling.
+Review keamanan independen 5C: tidak ada celah akses/isolasi/injeksi/hitung-ganda. Lima perbaikan kecil: (1) baris "Mitra aktif
+(saat ini)" tidak lagi diberi nilai "periode sebelumnya" (status mitra tak punya riwayat); (2) filter pengepul di Catatan Material
+memakai `PilihanMaster::semuaPengepul()` (juga pembeli lama/nonaktif); (3) `ProgresEkonomiSirkularStats` tidak lazy (dicetak di Laporan
+Kinerja); (4) angka negatif di tabel laporan berwarna bahaya (stok < 0, defisit — §7.5); (5) form Buku Kas memperingatkan bila mitra
+yang dipilih berjenis Pengepul (`TransaksiKasResource::peringatanPengepul()`), agar penjualan tidak dicatat ulang. 25 + 7 uji sabotase
+5C merah; sabotase 5B diulang tetap merah.
 Lanjutan dari Fase 1–3
 (`2026-11-17-peran-pengguna-dan-pengangkutan.md`) dan Fase 4 (`2026-11-17-fase-4-petugas-catat-iuran.md`);
 semua aturan kanonik di sana (`App\Support\Hari`, `NomorHp`, tenancy satu-DB, `diKsmLain`, uji sabotase,

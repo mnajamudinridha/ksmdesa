@@ -54,7 +54,9 @@ ksm ─┬─ users (ksm_id, peran, no_hp unik per KSM, pakai_sandi_default, akt
      ├─ setoran (petugas_id, diterima_oleh_id, tanggal)
      ├─ kategori_transaksi (jenis masuk|keluar, nama, aktif)  unik (ksm, jenis, nama)
      ├─ mitra (nama, jenis, kontak, no_hp, aktif)  unik (ksm, nama)
-     └─ transaksi_kas (tanggal, jenis, kategori_transaksi_id?, mitra_id? (hanya masuk), nominal, uraian, bukti?, dicatat_oleh_id)
+     ├─ transaksi_kas (tanggal, jenis, kategori_transaksi_id?, mitra_id? (hanya masuk), nominal, uraian, bukti?, dicatat_oleh_id)
+     ├─ jenis_material (nama, kelompok plastik|kertas|logam|kaca|organik|lainnya, aktif)  unik (ksm, nama)
+     └─ catatan_material (tanggal, aktivitas pilah|jual|olah, jenis_material_id?, berat_kg, mitra_id? + nilai_jual? (hanya jual), hasil_olah? (hanya olah), dicatat_oleh_id)
 ksm: logo, latar_login (json, ≤3), sandi_default_hash (#[Hidden]), saldo_awal, kas_mulai (buku kas)
 pengaturan_master (satu baris): logo, latar_login — tampilan panel master
 ```
@@ -80,6 +82,9 @@ Pengguna tidak pernah dihapus (dinonaktifkan). FK ke `users` dari tabel yang iku
 | Tabel laporan | `App\Support\Laporan\TabelLaporan` + `Laporan…` | Satu objek untuk layar (widget `TabelLaporanWidget`), Excel (`EksporXlsx`), dan cetak — angka tidak bisa berbeda. |
 | KSM aktif mencatat | `Ksm::scopeAktifMencatat`, `Ksm::HARI_AKTIF_MENCATAT` | Ada catatan baru (`created_at`) di `Ksm::RELASI_CATATAN` (pengangkutan, iuran, setoran, transaksi kas) dalam 7 hari. Dipakai stat, badge, dan filter panel master. |
 | Kas & saldo | `App\Support\RingkasanKas` | Masuk = iuran (tanggal kas) + transaksi masuk (+ penjualan material 5C); keluar = transaksi keluar. Saldo hari D = `saldo_awal` + masuk − keluar dari `kas_mulai` s.d. D; sebelum `kas_mulai` → null ("—"). Arus selalu dilaporkan. Uang di tangan petugas termasuk saldo. |
+| Material | `App\Support\RingkasanMaterial`, hook `CatatanMaterial::saving` | Terpulihkan = dipilah + diolah (jual tidak ditambahkan lagi); stok per jenis = dipilah − terjual s.d. akhir periode. Nilai jual = pemasukan kas pada tanggal catatan, **dibaca langsung** oleh `RingkasanKas` — tidak pernah disalin ke `transaksi_kas`, jadi ubah/hapus/ganti aktivitas langsung mengubah kas. Pembeli & nilai hanya untuk jual, hasil olah hanya untuk olah. Pengepul = mitra aktif berjenis Pengepul. |
+| Kemitraan | `App\Support\RingkasanMitra` | Dukungan = transaksi kas **masuk** yang mencantumkan mitra; penjualan = catatan jual ke mitra itu. Laporan memuat mitra aktif + yang berkontribusi di periode. |
+| Indikator ekonomi sirkular | `App\Support\RingkasanKinerja::indikator()` | Penagihan = iuran per bulan iuran ÷ (target × bulan dari bulan iuran pertama s.d. bulan ini); cakupan = §cakupan per RT; pemulihan = terpulihkan ÷ sampah terangkut; kemandirian = (iuran kas + penjualan) ÷ pengeluaran. Penyebut 0 → null ("—"). |
 | Kategori & mitra transaksi | `PilihanMaster::kategori()/mitra()`, hook `TransaksiKas::saving` | Kategori hanya dari jenis yang sama (aktif + tersimpan); kategori terpakai: jenis terkunci, tidak bisa dihapus. Nama "Iuran"/"Penjualan material" ditolak (dihitung otomatis). Mitra hanya untuk pemasukan (hook mengosongkan pada pengeluaran). |
 
 ## 5. Peran & akses
@@ -93,7 +98,7 @@ Pengguna tidak pernah dihapus (dinonaktifkan). FK ke `users` dari tabel yang iku
 | Pengangkutan | semua | miliknya; ubah sampai akhir hari berikutnya | riwayat rumahnya di dasbor |
 | Setoran petugas | kelola, batalkan | – | – |
 | Profil KSM (nama, logo, latar login, sandi default, saldo awal & mulai pembukuan) | ya | – | – |
-| Buku Kas, Kategori Transaksi, Mitra, Analitik & Laporan | kelola / lihat (data master terpakai: nonaktifkan, tidak bisa dihapus) | – | – |
+| Buku Kas, Catatan Material, Kategori Transaksi, Jenis Material, Mitra, Analitik & Laporan | kelola / lihat (data master terpakai: nonaktifkan, tidak bisa dihapus) | – | – |
 
 Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat iuran & pengangkutan).
 
@@ -158,6 +163,9 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
 | Isian wajib Profil KSM kosong di tes (`saldo_awal`) | instans dari factory tidak membaca default kolom DB | default juga di model (`Ksm::$attributes`) |
 | Uji `scopedUnique` dengan `assertHasFormErrors(['x' => 'unique'])` gagal | `scopedUnique` aturan closure (bukan aturan bernama) | beri `->validationMessages(['unique' => '…'])` dan uji teks pesannya |
 | `callAction` kedua di komponen yang sama: "Action [create] was not found" | aksi yang gagal validasi tetap ter-mount | panggil di `Livewire::test()` baru |
+| Verifikasi browser: widget dasbor tetap "Memuat..." | widget lazy dimuat saat terlihat; pane browser tersembunyi tidak memicunya | tampilkan pane, atau periksa halaman laporan (tabel tidak lazy) / tes Livewire |
+| Uji teks bantuan field (`helperText`) | Filament 5 menjadikannya skema anak — tidak ada `getHelperText()` | taruh keputusannya di method statis dan uji method itu (mis. `TransaksiKasResource::peringatanPengepul`) |
+| Isi modal aksi tidak ada di `->html()` tes | konten modal tidak dirender di HTML Livewire test | uji state (`mountedActions.0.data`) / `assertFormFieldExists(..., 'mountedActionSchema0', …)` |
 | Widget Stat/Chart memuat ulang tiap 5 detik | bawaan `CanPoll` `'5s'` | widget laporan/keuangan: `protected ?string $pollingInterval = null` |
 | Bukti PDF tidak terbuka di Chrome | Laravel menyajikan berkas disk `local` dengan CSP `sandbox`; penampil PDF tidak berjalan di dokumen ber-sandbox | unduh lewat aksi (`Storage::download`, ditangkap Livewire) dan `FileUpload::downloadable()`, bukan `openable()` |
 | Berkas bukti tertinggal saat KSM dihapus | cascade DB menghapus baris tanpa event model | bukti per KSM (`bukti-kas/{id}`), `Ksm::deleted` menghapus foldernya (avatar masih punya celah yang sama) |
@@ -185,7 +193,8 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
 | 4 | Petugas catat iuran, setoran ke pengurus; logo & latar login panel master | [plans/2026-11-17-fase-4-petugas-catat-iuran.md](plans/2026-11-17-fase-4-petugas-catat-iuran.md) |
 | 5A | Master RT/RW, dasbor eksplisit + Kelengkapan data, Analitik & Laporan Operasional (Excel, cetak), Excel Rekap Iuran, widget panel master | [plans/2026-11-17-fase-5-dasbor-dan-laporan.md](plans/2026-11-17-fase-5-dasbor-dan-laporan.md) §5 |
 | 5B | Buku Kas (bukti privat), Kategori Transaksi, Mitra, saldo awal & mulai pembukuan, Analitik & Laporan Keuangan, kartu keuangan di dasbor | dokumen yang sama §6 |
+| 5C | Jenis & Catatan Material (penjualan → kas), Analitik Lingkungan & Kemitraan, Laporan Lingkungan / Kemitraan / Kinerja terintegrasi, kartu progres ekonomi sirkular, lingkungan & kemitraan di dasbor | dokumen yang sama §7 |
 
 **Menunggu keputusan pemilik:** kebijakan `StatusIuran::tentukan()` (kurang/lebih/nonaktif), setelan email (`MAIL_MAILER=log`).
-**Berikutnya:** Fase 5C (material, lingkungan, kemitraan, kinerja) —
-rencana disetujui: [plans/2026-11-17-fase-5-dasbor-dan-laporan.md](plans/2026-11-17-fase-5-dasbor-dan-laporan.md).
+**Fase 5 selesai** (5A–5C): [plans/2026-11-17-fase-5-dasbor-dan-laporan.md](plans/2026-11-17-fase-5-dasbor-dan-laporan.md).
+Kandidat perbaikan kecil: widget analitik 5A (`OperasionalPeriodeStats`, `BeratTerangkutChart`, widget master) masih polling 5 detik.
