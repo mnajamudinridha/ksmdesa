@@ -153,5 +153,6 @@ Warga hanya melihat dasbornya (status iuran bulan ini, kontak petugas, riwayat i
 | 4 | Petugas catat iuran, setoran ke pengurus; logo & latar login panel master | [plans/2026-11-17-fase-4-petugas-catat-iuran.md](plans/2026-11-17-fase-4-petugas-catat-iuran.md) |
 
 **Menunggu keputusan pemilik:** kebijakan `StatusIuran::tentukan()` (kurang/lebih/nonaktif), setelan email (`MAIL_MAILER=log`).
-**Berikutnya:** widget dasbor master & desa + halaman laporan mengikuti mockup
-"KSM Circular Economy Dashboard" (rencana dulu sebelum eksekusi).
+**Berikutnya:** Fase 5 — widget dasbor master & desa + halaman laporan mengikuti mockup
+"KSM Circular Economy Dashboard"; rencana disetujui (5A → 5B → 5C):
+[plans/2026-11-17-fase-5-dasbor-dan-laporan.md](plans/2026-11-17-fase-5-dasbor-dan-laporan.md).
