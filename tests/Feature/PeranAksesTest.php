@@ -52,6 +52,25 @@ class PeranAksesTest extends TestCase
             ->assertOk();
     }
 
+    /**
+     * Regression (500 in production, 2026-11-17): "Profil saya" is not a tenant page; with the
+     * full layout the KSM switcher — shown only to master administrators — needed a tenant.
+     */
+    public function test_master_administrator_can_open_own_profile_on_a_ksm(): void
+    {
+        Ksm::factory()->create(['slug' => 'makmurjaya']);
+        $admin = User::factory()->superAdmin()->create();
+
+        $this->actingAs($admin)->get('http://makmurjaya.ksmdesa.test/profil-saya')->assertOk();
+    }
+
+    public function test_master_administrator_can_open_own_profile_on_master(): void
+    {
+        $this->actingAs(User::factory()->superAdmin()->create())
+            ->get('http://ksmdesa.test/admin/profil-saya')
+            ->assertOk();
+    }
+
     public function test_every_role_has_a_dashboard_and_own_profile(): void
     {
         $ksm = Ksm::factory()->create(['slug' => 'makmurjaya', 'nama' => 'KSM Makmur']);

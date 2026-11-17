@@ -44,7 +44,9 @@ class KsmPanelProvider extends PanelProvider
             ->id('ksm')
             ->path('')
             ->login(Login::class)
-            ->profile(ProfilSaya::class, isSimple: false)
+            // Simple layout: /profil-saya is not a tenant page, and the full layout's KSM switcher
+            // (shown to master administrators) needs a tenant — it crashed with a 500.
+            ->profile(ProfilSaya::class, isSimple: true)
             // Initials drawn locally: the default provider would send names to ui-avatars.com.
             ->defaultAvatarProvider(InisialAvatar::class)
             ->tenant(Ksm::class, slugAttribute: 'slug')
