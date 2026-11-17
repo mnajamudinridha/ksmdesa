@@ -3,6 +3,7 @@
 namespace App\Filament\Ksm\Widgets;
 
 use App\Support\Hari;
+use App\Support\RingkasanIuran;
 use App\Support\RingkasanPengangkutan;
 use Filament\Facades\Filament;
 use Filament\Support\Icons\Heroicon;
@@ -36,6 +37,10 @@ class TugasPetugasStatsOverview extends StatsOverviewWidget
                 ->description($ringkasan->rumahDiangkut($hariIni).' rumah diangkut')
                 ->descriptionIcon(Heroicon::ClipboardDocumentCheck)
                 ->color($tugas > 0 && $dicatat >= $tugas ? 'success' : 'warning'),
+            Stat::make('Belum disetor', RingkasanIuran::rupiah((int) $petugas->iuranDiterima()->belumDisetor()->sum('nominal')))
+                ->description($petugas->iuranDiterima()->belumDisetor()->count().' pembayaran yang saya pegang')
+                ->descriptionIcon(Heroicon::Wallet)
+                ->color('warning'),
             Stat::make('Perkiraan saya '.Hari::ini()->translatedFormat('F'), RingkasanPengangkutan::kg($ringkasan->berat(Hari::ini()->startOfMonth()->toDateString(), $hariIni)))
                 ->descriptionIcon(Heroicon::Scale)
                 ->chart(array_values($ringkasan->beratPerHari(14)))

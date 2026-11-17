@@ -140,4 +140,10 @@ class Ksm extends Model implements HasAvatar, HasName
     {
         return $this->hasMany(Pengangkutan::class);
     }
+
+    /** @return HasMany<Setoran, $this> */
+    public function setoran(): HasMany
+    {
+        return $this->hasMany(Setoran::class);
+    }
 }

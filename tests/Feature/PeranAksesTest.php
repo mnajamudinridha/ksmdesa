@@ -23,7 +23,9 @@ class PeranAksesTest extends TestCase
             'pengguna' => ['/users', 403, 403],
             // Phase 2: a petugas sees the customers assigned to them (read-only).
             'pelanggan' => ['/pelanggans', 200, 403],
-            'pembayaran' => ['/pembayaran-iurans', 403, 403],
+            // Phase 4: petugas see their own collections here ("Iuran diterima").
+            'pembayaran' => ['/pembayaran-iurans', 200, 403],
+            'setoran' => ['/setorans', 403, 403],
             'tarif' => ['/tarif-layanans', 403, 403],
             'rekap' => ['/rekap-iuran', 403, 403],
             // Filament denies the tenant profile page with 404 rather than 403.

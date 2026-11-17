@@ -3,7 +3,9 @@
 namespace App\Filament\Ksm\Resources\PembayaranIurans;
 
 use App\Filament\Ksm\Resources\PembayaranIurans\Pages\ManagePembayaranIurans;
+use App\Filament\Shared\PilihanPengguna;
 use App\Models\PembayaranIuran;
+use App\Support\BulanIuran;
 use BackedEnum;
 use Closure;
 use Filament\Actions\ActionGroup;
@@ -22,6 +24,7 @@ use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use UnitEnum;
 
@@ -41,8 +44,28 @@ class PembayaranIuranResource extends Resource
 
     protected static ?string $pluralModelLabel = 'pembayaran iuran';
 
+    /** Admins: every payment. Petugas: the payments they collected ("Iuran diterima"). */
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery()->with(['pelanggan', 'petugas', 'setoran']);
+        $user = auth()->user();
+
+        return match (true) {
+            (bool) $user?->isAdminKsm() => $query,
+            (bool) $user?->isPetugas() => $query->where('petugas_id', $user->getKey()),
+            default => $query->whereRaw('1 = 0'),
+        };
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return auth()->user()?->isPetugas() ? 'Iuran diterima' : 'Pembayaran Iuran';
+    }
+
     public static function form(Schema $schema): Schema
     {
+        $admin = fn (): bool => (bool) auth()->user()?->isAdminKsm();
+
         return $schema
             ->columns(2)
             ->components([
@@ -52,6 +75,8 @@ class PembayaranIuranResource extends Resource
                     ->searchable()
                     ->preload()
                     ->required()
+                    // A petugas corrects amounts/months, never moves a payment to another customer.
+                    ->disabled(fn (): bool => ! $admin())
                     ->live()
                     ->afterStateUpdated(function (?string $state, Set $set): void {
                         // Look up through the tenant explicitly rather than relying on the panel's implicit scope.
@@ -78,6 +103,22 @@ class PembayaranIuranResource extends Resource
                         if ($sudahAda) {
                             $fail('Pembayaran pelanggan ini untuk bulan tersebut sudah dicatat — ubah catatan yang ada.');
                         }
+                    })
+                    // A petugas stays inside the same window as "Terima iuran" — checked only when the
+                    // month is changed, so saving an older record unchanged never fails.
+                    ->rule(fn (?PembayaranIuran $record): Closure => function (string $attribute, mixed $value, Closure $fail) use ($admin, $record): void {
+                        $bulan = Carbon::parse($value)->startOfMonth()->toDateString();
+
+                        if ($admin() || $bulan === $record?->periode?->toDateString()) {
+                            return;
+                        }
+
+                        $awal = BulanIuran::iniBulan()->subMonths(BulanIuran::MUNDUR)->toDateString();
+                        $akhir = BulanIuran::iniBulan()->addMonths(BulanIuran::MAJU)->toDateString();
+
+                        if ($bulan < $awal || $bulan > $akhir) {
+                            $fail('Petugas hanya bisa mencatat 6 bulan ke belakang sampai 2 bulan ke depan.');
+                        }
                     }),
                 TextInput::make('nominal')
                     ->prefix('Rp')
@@ -87,7 +128,9 @@ class PembayaranIuranResource extends Resource
                 DatePicker::make('dibayar_pada')
                     ->label('Tanggal diterima')
                     ->native(false)
-                    ->default(now()),
+                    ->default(now())
+                    // The day the petugas took the cash is a fact of the deposit trail: admins only.
+                    ->disabled(fn (): bool => ! $admin()),
                 TextInput::make('catatan')
                     ->maxLength(255),
             ]);
@@ -115,6 +158,24 @@ class PembayaranIuranResource extends Resource
                     ->date('d M Y')
                     ->placeholder('—')
                     ->toggleable(),
+                TextColumn::make('petugas.name')
+                    ->label('Diterima oleh')
+                    ->placeholder('Pengurus')
+                    ->visible(fn (): bool => (bool) auth()->user()?->isAdminKsm()),
+                TextColumn::make('status_setor')
+                    ->label('Setoran')
+                    ->state(fn (PembayaranIuran $record): string => $record->statusSetor())
+                    ->formatStateUsing(fn (string $state, PembayaranIuran $record): string => match ($state) {
+                        'langsung' => 'Langsung',
+                        'belum' => 'Belum disetor',
+                        default => 'Disetor '.$record->setoran?->tanggal?->translatedFormat('d M Y'),
+                    })
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'langsung' => 'gray',
+                        'belum' => 'warning',
+                        default => 'success',
+                    }),
                 TextColumn::make('catatan')
                     ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -123,6 +184,19 @@ class PembayaranIuranResource extends Resource
                 SelectFilter::make('periode')
                     ->label('Bulan')
                     ->options(fn (): array => self::opsiBulan()),
+                SelectFilter::make('status_setor')
+                    ->label('Setoran')
+                    ->options(['belum' => 'Belum disetor', 'disetor' => 'Sudah disetor', 'langsung' => 'Langsung ke pengurus'])
+                    ->query(fn (Builder $query, array $data): Builder => match ($data['value'] ?? null) {
+                        'belum' => $query->belumDisetor(),
+                        'disetor' => $query->whereNotNull('setoran_id'),
+                        'langsung' => $query->whereNull('petugas_id'),
+                        default => $query,
+                    }),
+                SelectFilter::make('petugas_id')
+                    ->label('Petugas')
+                    ->options(fn (): array => PilihanPengguna::petugas())
+                    ->visible(fn (): bool => (bool) auth()->user()?->isAdminKsm()),
             ])
             ->recordActions([
                 ActionGroup::make([

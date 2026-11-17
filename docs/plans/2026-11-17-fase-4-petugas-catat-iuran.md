@@ -1,6 +1,6 @@
 # Blueprint Fase 4: Petugas mencatat iuran & setoran ke admin
 
-Status: **RENCANA — menunggu persetujuan pemilik.** Lanjutan dari
+Status: **DISETUJUI & DIIMPLEMENTASIKAN (2026-11-17).** Catatan implementasi: tanggal terima pada form Ubah petugas dikunci (bukan jendela min-kemarin) agar menyimpan catatan lama tanpa perubahan tidak pernah gagal; aturan jendela bulan di form Ubah hanya diperiksa bila bulan diganti. Lanjutan dari
 `docs/plans/2026-11-17-peran-pengguna-dan-pengangkutan.md` (Fase 1–3); semua aturan kanonik di sana
 (`App\Support\Hari`, `NomorHp`, tenancy satu-DB, `diKsmLain`, sabotase-test) tetap berlaku.
 Disusun dengan skill `planning-filament` (Filament Blueprint v2.4).

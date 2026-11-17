@@ -2,6 +2,7 @@
 
 namespace App\Filament\Ksm\Widgets;
 
+use App\Models\PembayaranIuran;
 use App\Support\RingkasanIuran;
 use Filament\Facades\Filament;
 use Filament\Widgets\StatsOverviewWidget;
@@ -20,12 +21,17 @@ class IuranStatsOverview extends StatsOverviewWidget
     {
         $ringkasan = new RingkasanIuran(Filament::getTenant());
         $bulan = $ringkasan->bulanTerakhir();
+        $diPetugas = (int) PembayaranIuran::query()->whereBelongsTo(Filament::getTenant())->belumDisetor()->sum('nominal');
 
         $stats = [
             Stat::make('Pelanggan aktif', $ringkasan->jumlahPelangganAktif())
                 ->description('dari '.$ringkasan->jumlahPelanggan().' terdaftar')
                 ->descriptionIcon('heroicon-m-home-modern')
                 ->color('primary'),
+            Stat::make('Di tangan petugas', RingkasanIuran::rupiah($diPetugas))
+                ->description($diPetugas > 0 ? 'belum disetor — terima di menu Setoran Petugas' : 'semua iuran sudah disetor')
+                ->descriptionIcon('heroicon-m-wallet')
+                ->color($diPetugas > 0 ? 'warning' : 'success'),
         ];
 
         if ($bulan === null) {

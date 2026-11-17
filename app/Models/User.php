@@ -143,6 +143,16 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasDefaul
         return $this->hasMany(Pengangkutan::class, 'petugas_id');
     }
 
+    /**
+     * Fee payments this petugas collected in the field.
+     *
+     * @return HasMany<PembayaranIuran, $this>
+     */
+    public function iuranDiterima(): HasMany
+    {
+        return $this->hasMany(PembayaranIuran::class, 'petugas_id');
+    }
+
     /** Master administrators act as admin in every KSM. */
     public function isAdminKsm(): bool
     {

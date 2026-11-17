@@ -32,6 +32,12 @@ class PelangganPolicy
         return $user->isAdminKsm();
     }
 
+    /** A petugas takes fee payments only at their own active customers. */
+    public function terimaIuran(User $user, Pelanggan $pelanggan): bool
+    {
+        return $user->isPetugas() && $pelanggan->aktif && $pelanggan->petugas_id !== null && $pelanggan->petugas_id === $user->getKey();
+    }
+
     public function delete(User $user, Pelanggan $pelanggan): bool
     {
         return false;

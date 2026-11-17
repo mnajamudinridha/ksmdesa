@@ -27,7 +27,7 @@ class RiwayatIuranSaya extends TableWidget
             ->query(fn (): Builder => PembayaranIuran::query()
                 ->whereBelongsTo(Filament::getTenant())
                 ->whereHas('pelanggan', fn (Builder $pelanggan) => $pelanggan->where('user_id', auth()->id()))
-                ->with('pelanggan')
+                ->with(['pelanggan', 'petugas'])
                 ->orderByDesc('periode'))
             ->paginated([6, 12, 24])
             ->emptyStateHeading('Belum ada pembayaran tercatat')
@@ -43,6 +43,9 @@ class RiwayatIuranSaya extends TableWidget
                     ->label('Diterima')
                     ->date('d M Y')
                     ->placeholder('—'),
+                TextColumn::make('petugas.name')
+                    ->label('Diterima oleh')
+                    ->placeholder('Pengurus'),
             ]);
     }
 }
