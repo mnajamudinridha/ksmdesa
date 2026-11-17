@@ -3,6 +3,7 @@
 namespace App\Filament\Ksm\Pages\Tenancy;
 
 use App\Filament\Shared\LogoKsmField;
+use App\Filament\Shared\SandiDefaultField;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Tenancy\EditTenantProfile;
 use Filament\Schemas\Schema;
@@ -38,6 +39,7 @@ class EditProfilKsm extends EditTenantProfile
                     ->required()
                     ->maxLength(255),
                 LogoKsmField::make(),
+                SandiDefaultField::make(),
             ]);
     }
 }

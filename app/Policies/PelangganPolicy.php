@@ -6,19 +6,20 @@ use App\Models\Pelanggan;
 use App\Models\User;
 
 /**
- * Phase 1: admins only (petugas/warga accounts already exist, their rights come in Phase 2:
- * petugas will see the customers assigned to them). Customers are deactivated, never deleted.
+ * Admins manage customers; a petugas may view (never change) the customers assigned to them.
+ * Customers are deactivated, never deleted.
  */
 class PelangganPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdminKsm();
+        return $user->isAdminKsm() || $user->isPetugas();
     }
 
     public function view(User $user, Pelanggan $pelanggan): bool
     {
-        return $user->isAdminKsm();
+        return $user->isAdminKsm()
+            || ($user->isPetugas() && $pelanggan->petugas_id !== null && $pelanggan->petugas_id === $user->getKey());
     }
 
     public function create(User $user): bool

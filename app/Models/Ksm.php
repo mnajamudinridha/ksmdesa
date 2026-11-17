@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\KsmFactory;
 use Filament\Models\Contracts\HasName;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +17,9 @@ use Illuminate\Support\Facades\Storage;
  * This is the tenant of the `ksm` Filament panel.
  */
 #[Table('ksm')]
-#[Fillable(['nama', 'slug', 'desa', 'logo'])]
+#[Fillable(['nama', 'slug', 'desa', 'logo', 'sandi_default_hash'])]
+// The hash never reaches form state / the browser.
+#[Hidden(['sandi_default_hash'])]
 class Ksm extends Model implements HasName
 {
     /** @use HasFactory<KsmFactory> */
@@ -28,6 +31,18 @@ class Ksm extends Model implements HasName
         static::updated(function (Ksm $ksm): void {
             if ($ksm->wasChanged('logo') && filled($lama = $ksm->getOriginal('logo'))) {
                 Storage::disk('public')->delete($lama);
+            }
+        });
+
+        // A new default password follows every account that still uses the default
+        // (auto-created and never changed). Query builder: the value is already a hash.
+        static::updated(function (Ksm $ksm): void {
+            if ($ksm->wasChanged('sandi_default_hash') && filled($ksm->sandi_default_hash)) {
+                User::query()
+                    ->whereBelongsTo($ksm)
+                    ->where('pakai_sandi_default', true)
+                    ->toBase()
+                    ->update(['password' => $ksm->sandi_default_hash]);
             }
         });
 

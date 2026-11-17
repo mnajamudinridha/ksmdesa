@@ -1,6 +1,6 @@
 # Blueprint: Peran pengguna, detail pelanggan, dan pengangkutan harian
 
-Status: **Fase 1 SELESAI & live (commit a5a60cc, 2026-11-17)** — termasuk §3.8 (administrator pusat) dan §3.9 (foto akun). Fase 2–3 belum. Disusun dengan skill `planning-filament` (Filament Blueprint v2.4).
+Status: **Fase 1 & Fase 2 SELESAI & live (2026-11-17)** — Fase 1 a5a60cc (+§3.8, §3.9, fix e50f745); Fase 2 menurut §4.0. Fase 3 belum. Disusun dengan skill `planning-filament` (Filament Blueprint v2.4).
 Versi terpasang yang diverifikasi: Laravel 13.42.0 · Filament 5.11.4 · Livewire 4.4.8 · PHPUnit 12 (bukan Pest).
 Sumber verifikasi: Boost `search-docs` + kode sumber terpasang di `vendor/` (rujukan baris disebut di tiap bagian).
 
@@ -463,6 +463,37 @@ Resource: App\Filament\Resources\Users\UserResource (panel admin/master, BARU)
 ---
 
 ## 4. Fase 2 — Detail pelanggan & penugasan petugas
+
+### 4.0 Amandemen Fase 2 (keputusan pemilik 2026-11-17) — MENGGANTIKAN bagian §4 yang bertentangan
+
+Keputusan: setiap pelanggan otomatis punya akun warga · tanpa nomor HP = akun dibuat, login nanti · sandi awal = sandi default
+desa · tidak wajib ganti sandi · ganti sandi default berlaku untuk akun baru **dan** akun yang belum mengganti sandi ·
+pelanggan nonaktif: akun tetap bisa login · nomor HP sama = satu akun (konsekuensi unik per KSM).
+
+Perubahan terhadap §4.1/§4.3:
+- **TIDAK ada kolom `pelanggan.no_hp`.** Nomor HP hanya di akun (`users.no_hp`, sumber tunggal untuk login & kontak). Form pelanggan
+  punya field virtual `no_hp_akun` yang menulis ke akun lewat aturan kanonik di bawah. **TIDAK ada Select `user_id` manual.**
+- Kolom baru: `ksm.sandi_default_hash` (string, nullable; hash, tak pernah plaintext) dan `users.pakai_sandi_default`
+  (boolean, default false).
+- Foto di daftar pelanggan = `akunWarga.avatar` (disk privat, signed) dengan inisial nama pelanggan sebagai cadangan.
+
+Aturan kanonik `App\Support\AkunWarga` (satu-satunya tempat yang membuat/menghubungkan akun warga):
+- `untukNomor(Ksm, ?string $nomor, string $nama): User` — nomor dinormalkan; bila sudah ada pengguna KSM itu dengan nomor tsb
+  → kembalikan pengguna itu (peran apa pun); selain itu buat akun **warga** baru (`aktif`, `pakai_sandi_default = true`,
+  password = `ksm.sandi_default_hash` atau hash acak tak terpakai bila default belum diatur, `no_hp` = nomor atau null).
+- `sinkronkanNomor(Pelanggan, ?string $nomor)` (edit): nomor null/sama → tidak berubah; nomor milik pengguna lain di KSM →
+  hubungkan pelanggan ke pengguna itu; akun sekarang warga & hanya milik pelanggan ini → ganti nomornya; selain itu → akun baru.
+- Model `Pelanggan::created`: bila `user_id` masih null → `untukNomor(ksm, null, nama)` (menutup jalur impor/command).
+- Form create (`CreateAction::using`) & edit (`EditAction::using`): ambil `no_hp_akun` dari data, panggil aturan di atas, simpan.
+- Model `User::saving`: password berubah tanpa `pakai_sandi_default` ikut diubah → `pakai_sandi_default = false`
+  (Profil saya & admin menyetel sandi → bukan default lagi).
+- Model `Ksm::updated`: `sandi_default_hash` berubah → `users` KSM itu dengan `pakai_sandi_default = true` mendapat hash baru
+  (query builder; tanpa event).
+- Field sandi default (`App\Filament\Shared\SandiDefaultField`) di Profil KSM dan form KSM master: password, min 8,
+  kosong = tidak diubah, disimpan sebagai `Hash::make`.
+- Backfill: `php artisan app:akun-warga {ksm}` + aksi header "Buat akun warga yang belum ada" (admin) → idempoten.
+- Pengaman salah ketik: helper text live pada `no_hp_akun` menyebut nama pemilik bila nomor sudah dipakai akun lain.
+
 
 ### 4.1 Model
 ```

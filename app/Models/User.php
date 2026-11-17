@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
@@ -48,6 +49,14 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasDefaul
 
     protected static function booted(): void
     {
+        // Any password change not explicitly marked as the default (Profil saya, admin form)
+        // means the account no longer follows the KSM's default password.
+        static::saving(function (User $user): void {
+            if ($user->isDirty('password') && ! $user->isDirty('pakai_sandi_default')) {
+                $user->pakai_sandi_default = false;
+            }
+        });
+
         // FileUpload never deletes the photo it replaces; the model owns the file's lifecycle.
         static::updated(function (User $user): void {
             if ($user->wasChanged('avatar') && filled($lama = $user->getOriginal('avatar'))) {
@@ -68,6 +77,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasDefaul
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
             'aktif' => 'boolean',
+            'pakai_sandi_default' => 'boolean',
             'peran' => PeranPengguna::class,
         ];
     }
@@ -82,6 +92,26 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasDefaul
     public function ksm(): BelongsTo
     {
         return $this->belongsTo(Ksm::class);
+    }
+
+    /**
+     * Customers whose warga account this is (one person may have several, e.g. house and shop).
+     *
+     * @return HasMany<Pelanggan, $this>
+     */
+    public function pelangganMilik(): HasMany
+    {
+        return $this->hasMany(Pelanggan::class, 'user_id');
+    }
+
+    /**
+     * Customers this petugas collects from.
+     *
+     * @return HasMany<Pelanggan, $this>
+     */
+    public function pelangganTugas(): HasMany
+    {
+        return $this->hasMany(Pelanggan::class, 'petugas_id');
     }
 
     /** Master administrators act as admin in every KSM. */

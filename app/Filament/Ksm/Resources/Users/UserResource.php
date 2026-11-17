@@ -55,6 +55,7 @@ class UserResource extends Resource
     {
         return $table
             ->recordTitleAttribute('name')
+            ->modifyQueryUsing(fn ($query) => $query->withCount(['pelangganTugas', 'pelangganMilik']))
             ->defaultSort('name')
             ->columns([
                 ImageColumn::make('avatar')
@@ -72,6 +73,14 @@ class UserResource extends Resource
                     ->searchable(),
                 TextColumn::make('peran')
                     ->badge(),
+                TextColumn::make('pelanggan')
+                    ->label('Pelanggan')
+                    ->state(fn (User $record): ?int => match ($record->peran) {
+                        PeranPengguna::Petugas => $record->pelanggan_tugas_count,
+                        default => $record->pelanggan_milik_count ?: null,
+                    })
+                    ->tooltip(fn (User $record): string => $record->peran === PeranPengguna::Petugas ? 'Pelanggan yang ditugaskan' : 'Pelanggan milik akun ini')
+                    ->placeholder('—'),
                 IconColumn::make('aktif')
                     ->boolean(),
                 TextColumn::make('email')

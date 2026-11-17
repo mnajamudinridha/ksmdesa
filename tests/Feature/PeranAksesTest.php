@@ -16,26 +16,27 @@ class PeranAksesTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @return array<string, array{string, int}> path, status for petugas/warga */
+    /** @return array<string, array{string, int, int}> path, status for petugas, status for warga */
     public static function halamanAdmin(): array
     {
         return [
-            'pengguna' => ['/users', 403],
-            'pelanggan' => ['/pelanggans', 403],
-            'pembayaran' => ['/pembayaran-iurans', 403],
-            'tarif' => ['/tarif-layanans', 403],
-            'rekap' => ['/rekap-iuran', 403],
+            'pengguna' => ['/users', 403, 403],
+            // Phase 2: a petugas sees the customers assigned to them (read-only).
+            'pelanggan' => ['/pelanggans', 200, 403],
+            'pembayaran' => ['/pembayaran-iurans', 403, 403],
+            'tarif' => ['/tarif-layanans', 403, 403],
+            'rekap' => ['/rekap-iuran', 403, 403],
             // Filament denies the tenant profile page with 404 rather than 403.
-            'profil ksm' => ['/profil-ksm', 404],
+            'profil ksm' => ['/profil-ksm', 404, 404],
         ];
     }
 
     #[DataProvider('halamanAdmin')]
-    public function test_petugas_and_warga_are_refused(string $path, int $status): void
+    public function test_petugas_and_warga_only_reach_what_their_role_allows(string $path, int $petugas, int $warga): void
     {
         $ksm = Ksm::factory()->create(['slug' => 'makmurjaya']);
 
-        foreach (['petugas', 'warga'] as $peran) {
+        foreach (['petugas' => $petugas, 'warga' => $warga] as $peran => $status) {
             $this->actingAs(User::factory()->for($ksm)->{$peran}()->create())
                 ->get("http://makmurjaya.ksmdesa.test{$path}")
                 ->assertStatus($status);
@@ -43,7 +44,7 @@ class PeranAksesTest extends TestCase
     }
 
     #[DataProvider('halamanAdmin')]
-    public function test_village_admin_is_allowed(string $path, int $status): void
+    public function test_village_admin_is_allowed(string $path, int $petugas, int $warga): void
     {
         $ksm = Ksm::factory()->create(['slug' => 'makmurjaya']);
 
